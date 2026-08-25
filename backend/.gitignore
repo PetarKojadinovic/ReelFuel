@@ -1,0 +1,8 @@
+.env
+venv/
+__pycache__/
+*.pyc
+reelfuel.db
+downloads/
+models/*.task
+.pytest_cache/
