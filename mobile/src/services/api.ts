@@ -5,6 +5,7 @@ const API_KEY = process.env.EXPO_PUBLIC_API_KEY || "";
 function authHeaders(extra: Record<string, string> = {}) {
   return {
     "X-API-Key": API_KEY,
+    "ngrok-skip-browser-warning": "true",
     ...extra,
   };
 }
@@ -311,5 +312,16 @@ export async function getWeeklyReport() {
   const API_BASE_URL = await getApiUrl();
   const response = await fetch(`${API_BASE_URL}/report/weekly`, { headers: authHeaders() });
   if (!response.ok) throw new Error("Greska pri ucitavanju izvestaja");
+  return response.json();
+}
+
+export async function generateShoppingListFromRecipe(recipeId: number) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/shoppinglist/generate-from-recipe`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ recipe_id: recipeId }),
+  });
+  if (!response.ok) throw new Error("Greska pri dodavanju iz recepta");
   return response.json();
 }

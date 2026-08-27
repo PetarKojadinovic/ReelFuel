@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.services.video_downloader import download_video
+from app.services.video_downloader import download_video, get_caption, extract_frames
 from app.services.transcription import transcribe_audio
 from app.services.pose_analysis import analyze_video
 from app.services.exercise_extractor import extract_exercise
 from app.models.database import get_db, Exercise
 import os
+import shutil
 
 router = APIRouter()
 
@@ -18,17 +19,20 @@ class ExerciseRequest(BaseModel):
 @router.post("/")
 def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
     video_path = None
+    frame_paths = []
     try:
         video_path = download_video(request.url)
 
         try:
             transcript = transcribe_audio(video_path)
         except Exception:
-            transcript = ""  # video nema audio ili transkripcija nije uspela - nastavljamo bez njega
+            transcript = ""
 
+        caption = get_caption(request.url)
+        frame_paths = extract_frames(video_path)
         pose_result = analyze_video(video_path)
 
-        exercise_data = extract_exercise(transcript, pose_result)
+        exercise_data = extract_exercise(transcript, pose_result, caption, frame_paths)
 
         db_exercise = Exercise(
             naziv_vezbe=exercise_data.get("naziv_vezbe"),
@@ -42,7 +46,7 @@ def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
         db.refresh(db_exercise)
 
         return {
-            "transcript": transcript or "Video nema govorni audio - koriscena je samo analiza pokreta",
+            "transcript": transcript or "Video nema govorni audio - koriscena je analiza pokreta i vizuelnih izvora",
             "pose_analysis": pose_result,
             "exercise": exercise_data,
             "exercise_id": db_exercise.id,
@@ -52,6 +56,10 @@ def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
     finally:
         if video_path and os.path.exists(video_path):
             os.remove(video_path)
+        if frame_paths:
+            frame_dir = os.path.dirname(frame_paths[0])
+            if os.path.isdir(frame_dir):
+                shutil.rmtree(frame_dir, ignore_errors=True)
 
             
 @router.get("/list")

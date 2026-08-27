@@ -5,7 +5,7 @@ from app.api.routes import recipe, profile
 from app.models.database import init_db
 from app.api.routes import recipe, profile, meal_plan, chat, food_log, exercise, workout_plan, workout_log, weight_log, shopping_list, report
 
-app = FastAPI(title="ReelFuel API", dependencies=[Depends(verify_api_key)])
+app = FastAPI(title="ReelFuel API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,3 +34,8 @@ app.include_router(report.router, prefix="/report", tags=["report"])
 @app.get("/")
 def root():
     return {"status": "ReelFuel backend radi"}
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}

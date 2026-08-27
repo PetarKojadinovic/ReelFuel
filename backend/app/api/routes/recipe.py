@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.services.video_downloader import download_audio
+from app.services.video_downloader import download_video, get_caption, extract_frames
 from app.services.transcription import transcribe_audio
 from app.services.recipe_extractor import extract_recipe
 from app.models.database import get_db, Recipe
 import os
+import shutil
 
 router = APIRouter()
 
@@ -14,14 +15,24 @@ class RecipeRequest(BaseModel):
 
 @router.post("/")
 def process_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
+    video_path = None
+    frame_paths = []
     try:
-        audio_path = download_audio(request.url)
-        transcript = transcribe_audio(audio_path)
+        video_path = download_video(request.url)
 
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        try:
+            transcript = transcribe_audio(video_path)
+        except Exception:
+            transcript = ""
 
-        recipe_data = extract_recipe(transcript)
+        caption = get_caption(request.url)
+        frame_paths = extract_frames(video_path)
+
+        recipe_data = extract_recipe(
+            transcript=transcript,
+            caption=caption,
+            frame_paths=frame_paths,
+        )
 
         db_recipe = Recipe(
             naziv_jela=recipe_data.get("naziv_jela"),
@@ -41,6 +52,14 @@ def process_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
+        if frame_paths:
+            frame_dir = os.path.dirname(frame_paths[0])
+            if os.path.isdir(frame_dir):
+                shutil.rmtree(frame_dir, ignore_errors=True)
+
 
 @router.get("/list")
 def list_recipes(db: Session = Depends(get_db)):

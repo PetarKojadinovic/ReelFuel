@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Markdown from "react-native-markdown-display";
 import {
   View,
   Text,
@@ -82,7 +83,11 @@ export default function ChatScreen() {
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.role === "user" ? styles.userBubble : styles.assistantBubble]}>
-            <Text style={styles.bubbleText}>{item.content}</Text>
+            {item.role === "assistant" ? (
+              <Markdown style={markdownStyles}>{item.content}</Markdown>
+            ) : (
+              <Text style={styles.bubbleText}>{item.content}</Text>
+            )}
           </View>
         )}
         ListEmptyComponent={
@@ -152,3 +157,19 @@ const styles = StyleSheet.create({
   },
   sendButtonText: { color: "#141414", fontSize: 18, fontWeight: "700" },
 });
+
+const markdownStyles = {
+  body: { color: colors.textPrimary, fontSize: 15, lineHeight: 21 },
+  strong: { fontWeight: "700" as const, color: colors.textPrimary },
+  em: { fontStyle: "italic" as const },
+  bullet_list: { marginVertical: 4 },
+  ordered_list: { marginVertical: 4 },
+  list_item: { marginVertical: 2 },
+  paragraph: { marginTop: 0, marginBottom: 4 },
+  code_inline: {
+    backgroundColor: colors.surface,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    color: colors.textPrimary,
+  },
+};

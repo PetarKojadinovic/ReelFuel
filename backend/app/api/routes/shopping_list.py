@@ -1,35 +1,36 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.models.database import get_db, MealPlan, ShoppingListItem
+from app.models.database import get_db, MealPlan, ShoppingListItem, Recipe
 from app.services.shopping_list_generator import generate_shopping_list
 
 router = APIRouter()
 
 
-@router.post("/generate")
-def generate(db: Session = Depends(get_db)):
-    plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
-    if not plan:
-        raise HTTPException(status_code=400, detail="Nema generisanog nedeljnog plana. Prvo generisi plan ishrane.")
-
-    try:
-        stavke = generate_shopping_list(plan.plan_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/generate-from-recipe")
+def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depends(get_db)):
+    recipe = db.query(Recipe).filter(Recipe.id == request.recipe_id).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recept nije pronadjen")
 
     db.query(ShoppingListItem).delete()
     db.commit()
 
-    for s in stavke:
-        db.add(ShoppingListItem(naziv=s.get("naziv"), kolicina=s.get("kolicina"), checked=False))
+    for s in recipe.sastojci or []:
+        naziv = (s.get("naziv") or "").strip()
+        if not naziv:
+            continue
+        db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False))
+
     db.commit()
 
-    items = db.query(ShoppingListItem).all()
+    items = db.query(ShoppingListItem).order_by(ShoppingListItem.id.asc()).all()
     return {
         "items": [
             {"id": i.id, "naziv": i.naziv, "kolicina": i.kolicina, "checked": i.checked}
             for i in items
-        ]
+        ],
+        "naziv_jela": recipe.naziv_jela,
     }
 
 
