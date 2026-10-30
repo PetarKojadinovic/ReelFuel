@@ -123,3 +123,18 @@ class ShoppingListItem(Base):
     kolicina = Column(String, nullable=True)
     checked = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class IngestJob(Base):
+    __tablename__ = "ingest_jobs"
+
+    id = Column(String, primary_key=True)
+    url = Column(String)
+    url_norm = Column(String, index=True)
+    status = Column(String, default="u_toku")  # u_toku, gotovo, greska, potrebna_odluka
+    faza = Column(String, default="")
+    tip = Column(String, nullable=True)  # recept ili vezba
+    rezultat = Column(JSON, nullable=True)
+    greska = Column(String, nullable=True)
+    sacuvano_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

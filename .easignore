@@ -1,0 +1,10 @@
+backend/
+node_modules/
+**/node_modules/
+.expo/
+**/.expo/
+.claude/
+**/.claude/
+*.log
+android/
+ios/

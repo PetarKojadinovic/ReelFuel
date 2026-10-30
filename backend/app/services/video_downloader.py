@@ -99,3 +99,16 @@ def extract_frames(video_path: str, max_frames: int = 6) -> list[str]:
             frame_paths.append(frame_path)
 
     return frame_paths
+
+
+def fetch_metadata(url: str) -> dict:
+    """Cita opis i naslov videa bez preuzimanja."""
+    opts = {"quiet": True, "skip_download": True, "noplaylist": True}
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    return {
+        "title": info.get("title"),
+        "description": info.get("description"),
+        "uploader": info.get("uploader"),
+        "duration": info.get("duration"),
+    }

@@ -7,6 +7,39 @@ from app.services.shopping_list_generator import generate_shopping_list
 router = APIRouter()
 
 
+class GenerateFromRecipeRequest(BaseModel):
+    recipe_id: int
+
+
+def _items_response(db: Session) -> list:
+    items = db.query(ShoppingListItem).order_by(ShoppingListItem.id.asc()).all()
+    return [
+        {"id": i.id, "naziv": i.naziv, "kolicina": i.kolicina, "checked": i.checked}
+        for i in items
+    ]
+
+
+@router.post("/generate")
+def generate(db: Session = Depends(get_db)):
+    plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
+    if not plan:
+        raise HTTPException(status_code=400, detail="Nema generisanog nedeljnog plana. Prvo generisi plan ishrane.")
+
+    try:
+        stavke = generate_shopping_list(plan.plan_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    db.query(ShoppingListItem).delete()
+    db.commit()
+
+    for s in stavke:
+        db.add(ShoppingListItem(naziv=s.get("naziv"), kolicina=s.get("kolicina"), checked=False))
+    db.commit()
+
+    return {"items": _items_response(db)}
+
+
 @router.post("/generate-from-recipe")
 def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depends(get_db)):
     recipe = db.query(Recipe).filter(Recipe.id == request.recipe_id).first()
@@ -21,28 +54,14 @@ def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depen
         if not naziv:
             continue
         db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False))
-
     db.commit()
 
-    items = db.query(ShoppingListItem).order_by(ShoppingListItem.id.asc()).all()
-    return {
-        "items": [
-            {"id": i.id, "naziv": i.naziv, "kolicina": i.kolicina, "checked": i.checked}
-            for i in items
-        ],
-        "naziv_jela": recipe.naziv_jela,
-    }
+    return {"items": _items_response(db), "naziv_jela": recipe.naziv_jela}
 
 
 @router.get("/")
 def get_list(db: Session = Depends(get_db)):
-    items = db.query(ShoppingListItem).order_by(ShoppingListItem.id.asc()).all()
-    return {
-        "items": [
-            {"id": i.id, "naziv": i.naziv, "kolicina": i.kolicina, "checked": i.checked}
-            for i in items
-        ]
-    }
+    return {"items": _items_response(db)}
 
 
 @router.patch("/{item_id}/toggle")

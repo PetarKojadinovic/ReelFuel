@@ -1,7 +1,22 @@
-import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { Stack, router, useRootNavigationState } from "expo-router";
+import { useShareIntent } from "expo-share-intent";
 import { colors } from "../theme";
 
 export default function RootLayout() {
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+  const navState = useRootNavigationState();
+
+  useEffect(() => {
+    if (!hasShareIntent || !navState?.key) return;
+    const raw = shareIntent.webUrl || shareIntent.text || "";
+    const match = raw.match(/https?:\/\/\S+/);
+    if (match) {
+      router.push({ pathname: "/ingest", params: { url: match[0] } });
+    }
+    resetShareIntent();
+  }, [hasShareIntent, shareIntent, navState?.key]);
+
   return (
     <Stack
       screenOptions={{
@@ -23,6 +38,8 @@ export default function RootLayout() {
       <Stack.Screen name="shopping-list" options={{ title: "Lista za Kupovinu" }} />
       <Stack.Screen name="weekly-report" options={{ title: "Nedeljni Izveštaj" }} />
       <Stack.Screen name="settings" options={{ title: "Podešavanja" }} />
+      <Stack.Screen name="workout-plan" options={{ title: "Plan Treninga" }} />
+      <Stack.Screen name="ingest" options={{ title: "Obrada linka" }} />
     </Stack>
   );
 }

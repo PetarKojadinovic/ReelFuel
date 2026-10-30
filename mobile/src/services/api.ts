@@ -325,3 +325,33 @@ export async function generateShoppingListFromRecipe(recipeId: number) {
   if (!response.ok) throw new Error("Greska pri dodavanju iz recepta");
   return response.json();
 }
+
+
+export async function startIngest(url: string, tip?: "recept" | "vezba") {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/ingest/`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ url, tip }),
+  });
+  if (!response.ok) throw new Error("Greska pri slanju linka");
+  return response.json();
+}
+
+export async function getIngestJob(id: string) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/ingest/${id}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri citanju statusa");
+  return response.json();
+}
+
+export async function saveIngestJob(id: string) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/ingest/${id}/save`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error("Greska pri cuvanju");
+  return response.json();
+}
