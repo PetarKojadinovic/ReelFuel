@@ -4,6 +4,7 @@ import { getProfile, generateMealPlan, getLatestMealPlan, addLogEntry, getDayLog
 import { getTodayDate } from "../utils/date";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
+import { scheduleMealReminders } from "../services/notifications";
 
 export default function MealPlanScreen() {
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,7 @@ export default function MealPlanScreen() {
     try {
       const data = await generateMealPlan();
       setPlan(data.plan);
+      scheduleMealReminders({ askPermission: false }).catch(() => {});
     } catch (err) {
       Alert.alert("Greška", "Nije uspelo generisanje plana. Proveri da li imaš sačuvan profil.");
     } finally {

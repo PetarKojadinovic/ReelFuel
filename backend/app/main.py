@@ -16,6 +16,10 @@ from app.api.routes import (
     shopping_list,
     report,
     ingest,
+    dan,
+    nedelja,
+    korekcija,
+    plan,
 )
 
 app = FastAPI(title="ReelFuel API", dependencies=[Depends(verify_api_key)])
@@ -32,7 +36,6 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
-    # Poslovi koji su ostali "u_toku" posle restarta servera se vise ne izvrsavaju
     db = SessionLocal()
     try:
         db.query(IngestJob).filter(IngestJob.status == "u_toku").update(
@@ -59,6 +62,10 @@ app.include_router(weight_log.router, prefix="/weightlog", tags=["weightlog"])
 app.include_router(shopping_list.router, prefix="/shoppinglist", tags=["shoppinglist"])
 app.include_router(report.router, prefix="/report", tags=["report"])
 app.include_router(ingest.router, prefix="/ingest", tags=["ingest"])
+app.include_router(dan.router, prefix="/dan", tags=["dan"])
+app.include_router(nedelja.router, prefix="/nedelja", tags=["nedelja"])
+app.include_router(korekcija.router, prefix="/korekcija", tags=["korekcija"])
+app.include_router(plan.router, prefix="/plan", tags=["plan"])
 
 
 @app.get("/")

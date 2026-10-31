@@ -138,3 +138,14 @@ class IngestJob(Base):
     greska = Column(String, nullable=True)
     sacuvano_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class KalorijskaKorekcija(Base):
+    __tablename__ = "kalorijska_korekcija"
+
+    id = Column(Integer, primary_key=True, index=True)
+    delta = Column(Integer)
+    razlog = Column(String)
+    tezina_trend = Column(Float, nullable=True)  # kg nedeljno
+    status = Column(String, default="predlog")  # predlog, prihvaceno, odbijeno, ponisteno
+    created_at = Column(DateTime, default=datetime.utcnow)

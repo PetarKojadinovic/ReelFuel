@@ -1,20 +1,27 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Switch, Alert } from "react-native";
 import { router } from "expo-router";
 import { getApiUrl, setApiUrl, getDefaultUrl } from "../services/apiConfig";
+import { getAutoPlanOn, setAutoPlanOn } from "../services/mealTimes";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function SettingsScreen() {
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [autoPlan, setAutoPlan] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const current = await getApiUrl();
-      setUrl(current);
+      setUrl(await getApiUrl());
+      setAutoPlan(await getAutoPlanOn());
     })();
   }, []);
+
+  const toggleAuto = async (v: boolean) => {
+    setAutoPlan(v);
+    await setAutoPlanOn(v);
+  };
 
   const handleSave = async () => {
     if (!url.trim()) {
@@ -24,9 +31,7 @@ export default function SettingsScreen() {
     setSaving(true);
     try {
       await setApiUrl(url.trim());
-      Alert.alert("Sačuvano", "Adresa servera je ažurirana.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      Alert.alert("Sačuvano", "Adresa servera je ažurirana.", [{ text: "OK", onPress: () => router.back() }]);
     } finally {
       setSaving(false);
     }
@@ -62,6 +67,16 @@ export default function SettingsScreen() {
       <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={handleReset}>
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Vrati na podrazumevanu adresu</Text>
       </TouchableOpacity>
+
+      <View style={[common.rowBetween, { marginTop: 32 }]}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={typography.body}>Automatski plan svake nedelje</Text>
+          <Text style={typography.bodySecondary}>
+            Prvog otvaranja u novoj nedelji pravi plan ishrane, plan treninga i listu za kupovinu.
+          </Text>
+        </View>
+        <Switch value={autoPlan} onValueChange={toggleAuto} trackColor={{ true: colors.primary }} />
+      </View>
     </View>
   );
 }

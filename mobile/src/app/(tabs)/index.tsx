@@ -6,6 +6,7 @@ import { getTodayDate } from "../../utils/date";
 import { colors } from "../../theme";
 import { common, typography, spacing, radius } from "../../styles/common";
 import { ActivityIndicator } from "react-native";
+import NedeljaIKorekcija from "../../components/NedeljaIKorekcija";
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,8 @@ export default function HomeScreen() {
           <View style={[styles.progressFill, { width: `${progres * 100}%` }]} />
         </View>
       </View>
+
+      <NedeljaIKorekcija onChanged={load} />
 
       <View style={styles.grid}>
         <TouchableOpacity style={[common.card, styles.gridCard]} onPress={() => router.push("/recipes")}>

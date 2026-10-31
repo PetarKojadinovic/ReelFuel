@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models.database import get_db, UserProfile, Recipe, MealPlan
 from app.services.meal_plan_generator import generate_weekly_plan
+from app.services.daily_nutrition import get_dnevni_cilj
 
 router = APIRouter()
 
@@ -12,14 +13,7 @@ def generate_plan(db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=400, detail="Prvo napravi profil (POST /profile/)")
 
-    if profile.pol == "muski":
-        bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine + 5
-    else:
-        bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine - 161
-
-    activity_multipliers = {"nizak": 1.2, "srednji": 1.55, "visok": 1.725}
-    tdee = bmr * activity_multipliers.get(profile.nivo_aktivnosti, 1.55)
-    dnevni_cilj = round(tdee - 500) if profile.cilj == "mrsavljenje" else round(tdee)
+    dnevni_cilj = get_dnevni_cilj(db)
 
     recipes = db.query(Recipe).all()
     saved_recipes = [

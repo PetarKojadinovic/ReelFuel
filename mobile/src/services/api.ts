@@ -1,4 +1,5 @@
 import { getApiUrl } from "./apiConfig";
+import { getMealTimes } from "./mealTimes";
 
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY || "";
 
@@ -353,5 +354,119 @@ export async function saveIngestJob(id: string) {
     body: JSON.stringify({}),
   });
   if (!response.ok) throw new Error("Greska pri cuvanju");
+  return response.json();
+}
+
+function nowHM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+export async function getDan(datum: string) {
+  const API_BASE_URL = await getApiUrl();
+  const t = await getMealTimes();
+  const q =
+    `sada=${encodeURIComponent(nowHM())}` +
+    `&dorucak=${encodeURIComponent(t.dorucak)}` +
+    `&rucak=${encodeURIComponent(t.rucak)}` +
+    `&vecera=${encodeURIComponent(t.vecera)}`;
+  const response = await fetch(`${API_BASE_URL}/dan/${datum}?${q}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri ucitavanju dana");
+  return response.json();
+}
+
+export async function danAkcija(
+  datum: string,
+  obrokTip: string,
+  body: { akcija: "pojeo" | "preskocio" | "zamena"; naziv?: string; kalorije?: number }
+) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/dan/${datum}/${obrokTip}`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("Greska pri cuvanju obroka");
+  return response.json();
+}
+
+export async function analyzeMealPhoto(base64: string, mediaType = "image/jpeg") {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/dan/analiza-slike`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ slika_base64: base64, media_type: mediaType }),
+  });
+  if (!response.ok) throw new Error("Greska pri analizi slike");
+  return response.json();
+}
+
+
+async function serverDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const j = await response.json();
+    if (typeof j.detail === "string") return j.detail;
+  } catch {}
+  return fallback;
+}
+
+export async function osveziNedelju() {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/nedelja/osvezi`, { method: "POST", headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri osvezavanju nedelje");
+  return response.json();
+}
+
+export async function getNedeljaStatus() {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/nedelja/status`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri citanju statusa");
+  return response.json();
+}
+
+export async function getPlanSlotovi(recipeId: number) {
+  const API_BASE_URL = await getApiUrl();
+  const t = await getMealTimes();
+  const q =
+    `recipe_id=${recipeId}&sada=${encodeURIComponent(nowHM())}` +
+    `&dorucak=${encodeURIComponent(t.dorucak)}&rucak=${encodeURIComponent(t.rucak)}&vecera=${encodeURIComponent(t.vecera)}`;
+  const response = await fetch(`${API_BASE_URL}/plan/slotovi?${q}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri ucitavanju slobodnih obroka"));
+  return response.json();
+}
+
+export async function ubaciUPlan(recipeId: number, danOffset: number, obrokTip: string) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/plan/ubaci`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ recipe_id: recipeId, dan_offset: danOffset, obrok_tip: obrokTip }),
+  });
+  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri ubacivanju u plan"));
+  return response.json();
+}
+
+export async function getKorekcija() {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/korekcija/`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri citanju predloga");
+  return response.json();
+}
+
+export async function odgovoriKorekcija(id: number, prihvati: boolean) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/korekcija/${id}/odgovor`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ prihvati }),
+  });
+  if (!response.ok) throw new Error("Greska pri cuvanju odgovora");
+  return response.json();
+}
+
+export async function resetKorekcija() {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/korekcija/reset`, { method: "POST", headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri vracanju cilja");
   return response.json();
 }

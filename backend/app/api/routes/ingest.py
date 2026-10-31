@@ -86,9 +86,9 @@ def save(job_id: str, req: SaveRequest, db: Session = Depends(get_db)):
     data = req.rezultat or job.rezultat or {}
     if job.tip == "recept":
         obj = Recipe(
-            naziv_jela=data.get("naziv_jela"),
-            sastojci=data.get("sastojci"),
-            koraci=data.get("koraci"),
+            naziv_jela=data.get("naziv_jela") or "Recept bez naziva",
+            sastojci=data.get("sastojci") or [],
+            koraci=data.get("koraci") or [],
             priblizne_kalorije=data.get("priblizne_kalorije"),
             source_url=job.url,
         )

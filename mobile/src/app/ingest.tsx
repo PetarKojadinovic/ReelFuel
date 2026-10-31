@@ -49,7 +49,11 @@ export default function IngestScreen() {
     setSaving(true);
     try {
       const r = await saveIngestJob(job.id);
-      router.replace(r.tip === "recept" ? "/recipes" : "/exercises");
+      if (r.tip === "recept") {
+        router.replace({ pathname: "/dodaj-u-plan", params: { recipe_id: String(r.id) } });
+      } else {
+        router.replace("/exercises");
+      }
     } catch {
       Alert.alert("Greška", "Nije uspelo čuvanje.");
     } finally {

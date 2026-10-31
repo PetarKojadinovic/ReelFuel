@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from app.models.database import get_db, FoodLogEntry, WorkoutLogEntry, WeightLog, UserProfile
+from app.services.daily_nutrition import day_summary
+from app.services.daily_nutrition import get_dnevni_cilj
 
 router = APIRouter()
 
@@ -14,13 +16,7 @@ def get_weekly_report(db: Session = Depends(get_db)):
     if not profile:
         return {"exists": False}
 
-    if profile.pol == "muski":
-        bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine + 5
-    else:
-        bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine - 161
-
-    tdee = bmr * ACTIVITY_MULTIPLIERS.get(profile.nivo_aktivnosti, 1.55)
-    dnevni_cilj = round(tdee - 500) if profile.cilj == "mrsavljenje" else round(tdee)
+    dnevni_cilj = get_dnevni_cilj(db)
 
     today = date.today()
     last_7_dates = [(today - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
@@ -32,7 +28,7 @@ def get_weekly_report(db: Session = Depends(get_db)):
         entries = db.query(FoodLogEntry).filter(FoodLogEntry.datum == d).all()
         if entries:
             dani_sa_unosom += 1
-            ukupno = sum(e.kalorije for e in entries)
+            ukupno = day_summary(db, d, "23:59")["ukupno"]
             if abs(ukupno - dnevni_cilj) <= 150:
                 dani_pogodjen_cilj += 1
 

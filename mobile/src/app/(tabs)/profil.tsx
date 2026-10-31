@@ -162,6 +162,10 @@ export default function ProfilScreen() {
           <Text style={{ color: colors.textSecondary, fontSize: 13 }}>⚙️ Podešavanja servera</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }} onPress={() => router.push("/podsetnici")}>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>🔔 Podsetnici za obroke</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={[common.primaryButton, { marginTop: 24 }]} onPress={handleSave} disabled={saving}>
           <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj profil"}</Text>
         </TouchableOpacity>
