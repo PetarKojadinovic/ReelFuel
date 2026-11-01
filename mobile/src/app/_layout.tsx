@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="zamena" options={{ title: "Zamena obroka" }} />
         <Stack.Screen name="podsetnici" options={{ title: "Podsetnici" }} />
         <Stack.Screen name="dodaj-u-plan" options={{ title: "Dodaj u plan" }} />
+        <Stack.Screen name="skener" options={{ title: "Skeniraj pakovanje" }} />
       </Stack>
     </>
   );

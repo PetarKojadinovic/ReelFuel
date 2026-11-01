@@ -20,6 +20,7 @@ from app.api.routes import (
     nedelja,
     korekcija,
     plan,
+    proizvod,
 )
 
 app = FastAPI(title="ReelFuel API", dependencies=[Depends(verify_api_key)])
@@ -66,6 +67,7 @@ app.include_router(dan.router, prefix="/dan", tags=["dan"])
 app.include_router(nedelja.router, prefix="/nedelja", tags=["nedelja"])
 app.include_router(korekcija.router, prefix="/korekcija", tags=["korekcija"])
 app.include_router(plan.router, prefix="/plan", tags=["plan"])
+app.include_router(proizvod.router, prefix="/proizvod", tags=["proizvod"])
 
 
 @app.get("/")

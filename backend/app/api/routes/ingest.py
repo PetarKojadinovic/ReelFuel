@@ -6,21 +6,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.url_guard import GRESKA, host_ok
 from app.models.database import get_db, IngestJob, Recipe, Exercise
 from app.services.ingest_pipeline import run_ingest
 
 router = APIRouter()
-
-# Dozvoljeni izvori - sprecava da server preuzima proizvoljne adrese
-ALLOWED_HOSTS = ("instagram.com", "tiktok.com")
-
-
-def _host_ok(url: str) -> bool:
-    p = urlparse(url.strip())
-    if p.scheme not in ("http", "https") or not p.hostname:
-        return False
-    h = p.hostname.lower()
-    return any(h == d or h.endswith("." + d) for d in ALLOWED_HOSTS)
 
 
 def _normalize(url: str) -> str:
@@ -39,8 +29,8 @@ class SaveRequest(BaseModel):
 
 @router.post("/")
 def start(req: IngestRequest, background: BackgroundTasks, db: Session = Depends(get_db)):
-    if not _host_ok(req.url):
-        raise HTTPException(status_code=400, detail="Podržani su samo Instagram i TikTok linkovi")
+    if not host_ok(req.url):
+        raise HTTPException(status_code=400, detail=GRESKA)
 
     norm = _normalize(req.url)
     if not req.tip:

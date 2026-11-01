@@ -248,6 +248,12 @@ export default function DnevnikScreen() {
             >
               <Text style={common.secondaryButtonText}>📷 Slikaj obrok</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[common.secondaryButton, { marginBottom: 12 }]}
+              onPress={() => router.push({ pathname: "/skener", params: { datum: today } })}
+            >
+              <Text style={common.secondaryButtonText}>🏷️ Skeniraj pakovanje</Text>
+            </TouchableOpacity>
             <TextInput style={common.input} value={naziv} onChangeText={setNaziv} placeholder="Naziv obroka" placeholderTextColor={colors.textSecondary} />
             <TextInput style={common.input} value={kalorije} onChangeText={setKalorije} placeholder="Kalorije" placeholderTextColor={colors.textSecondary} keyboardType="numeric" />
             <TouchableOpacity style={common.primaryButton} onPress={handleAddFood} disabled={saving}>

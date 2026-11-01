@@ -5,6 +5,7 @@ import { getProfile, saveProfile, getWeightSummary, addWeightEntry } from "../..
 import { colors } from "../../theme";
 import { common, typography } from "../../styles/common";
 import WeightChart from "../../components/WeightChart";
+import { getTodayDate } from "../../utils/date";
 
 export default function ProfilScreen() {
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,7 @@ export default function ProfilScreen() {
   const [aktivnost, setAktivnost] = useState<"nizak" | "srednji" | "visok">("srednji");
   const [cilj, setCilj] = useState<"mrsavljenje" | "dobijanje_mise" | "odrzavanje">("mrsavljenje");
   const [raspodela, setRaspodela] = useState<"vecera_najveca" | "rucak_najveci" | "dorucak_najveci" | "ravnomerno">("vecera_najveca");
+  const [brojTreninga, setBrojTreninga] = useState(4);
   const [saving, setSaving] = useState(false);
 
   useFocusEffect(
@@ -43,6 +45,7 @@ export default function ProfilScreen() {
         setCilj(data.cilj);
         setRaspodela(data.raspodela_kalorija || "vecera_najveca");
         setCiljnaTezina(data.ciljna_tezina_kg ? String(data.ciljna_tezina_kg) : "");
+        setBrojTreninga(data.broj_treninga_nedeljno || 4);
       }
       const summary = await getWeightSummary();
       if (summary.exists) setWeightSummary(summary);
@@ -54,18 +57,27 @@ export default function ProfilScreen() {
   };
 
   const handleSave = async () => {
+    const t = parseFloat(tezina.replace(",", "."));
+    const v = parseFloat(visina.replace(",", "."));
+    const g = parseInt(godine);
+    const ct = ciljnaTezina.trim() ? parseFloat(ciljnaTezina.replace(",", ".")) : undefined;
+    if (!(t > 20 && t < 400) || !(v > 80 && v < 260) || !(g > 9 && g < 120) || (ct !== undefined && !(ct > 20 && ct < 400))) {
+      Alert.alert("Greška", "Proveri težinu, visinu, godine i ciljnu težinu.");
+      return;
+    }
     setSaving(true);
     try {
       await saveProfile({
-        tezina_kg: parseFloat(tezina),
-        visina_cm: parseFloat(visina),
-        godine: parseInt(godine),
+        tezina_kg: t,
+        visina_cm: v,
+        godine: g,
         pol,
         nivo_aktivnosti: aktivnost,
         cilj,
         raspodela_kalorija: raspodela,
-        ciljna_tezina_kg: ciljnaTezina ? parseFloat(ciljnaTezina) : undefined,
-      } as any);
+        broj_treninga_nedeljno: brojTreninga,
+        ciljna_tezina_kg: ct,
+      });
       await load();
       setEditing(false);
     } catch (err) {
@@ -80,7 +92,7 @@ export default function ProfilScreen() {
     setLoggingWeight(true);
     try {
       await addWeightEntry({
-        datum: new Date().toISOString().slice(0, 10),
+        datum: getTodayDate(),
         tezina_kg: parseFloat(noviUnosTezina),
       });
       setNoviUnosTezina("");
@@ -149,6 +161,13 @@ export default function ProfilScreen() {
           placeholder="npr. 73"
           placeholderTextColor={colors.textSecondary}
         />
+
+        <Text style={typography.label}>Treninga nedeljno</Text>
+        <View style={styles.row}>
+          {[2, 3, 4, 5, 6].map((n) => (
+            <OptionButton key={n} label={String(n)} active={brojTreninga === n} onPress={() => setBrojTreninga(n)} />
+          ))}
+        </View>
 
         <Text style={typography.label}>Kada najviše jedeš?</Text>
         <View style={styles.columnOptions}>
@@ -244,13 +263,23 @@ export default function ProfilScreen() {
         <DataRow label="Visina" value={`${profile.visina_cm} cm`} />
         <DataRow label="Godine" value={`${profile.godine}`} />
         <DataRow label="Pol" value={profile.pol === "muski" ? "Muški" : "Ženski"} />
-        <DataRow label="Nivo aktivnosti" value={profile.nivo_aktivnosti} last />
+        <DataRow label="Nivo aktivnosti" value={profile.nivo_aktivnosti} />
+        <DataRow label="Treninga nedeljno" value={`${profile.broj_treninga_nedeljno ?? 4}`} last />
       </View>
 
       <Text style={typography.sectionLabel}>Izračunato</Text>
       <View style={common.card}>
+        <DataRow label="Bazalni metabolizam (BMR)" value={`${profile.bmr ?? "—"} kcal`} />
+        <DataRow label="Ukupna potrošnja (TDEE)" value={`${profile.tdee ?? "—"} kcal`} />
         <DataRow label="Dnevni cilj" value={`${profile.dnevni_cilj_kalorija ?? "—"} kcal`} last />
       </View>
+
+      <TouchableOpacity style={{ marginBottom: 12, alignItems: "center" }} onPress={() => router.push("/settings")}>
+        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>⚙️ Podešavanja servera</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={{ marginBottom: 12, alignItems: "center" }} onPress={() => router.push("/podsetnici")}>
+        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>🔔 Podsetnici za obroke</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={[common.primaryButton, { marginTop: 8 }]} onPress={() => setEditing(true)}>
         <Text style={common.primaryButtonText}>Uredi profil</Text>

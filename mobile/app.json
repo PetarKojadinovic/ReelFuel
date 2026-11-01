@@ -18,6 +18,20 @@
         }
       ],
       "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ReelFuel koristi kameru za skeniranje bar-koda sa pakovanja i slikanje obroka.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "ReelFuel upisuje tvoje treninge u poseban kalendar \"ReelFuel\"."
+        }
+      ],
       "expo-splash-screen",
       "expo-web-browser"
     ],

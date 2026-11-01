@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, Platform } from "react-native";
 import { getProfile, generateWorkoutPlan, getLatestWorkoutPlan, addWorkoutLogEntry, getWorkoutDayLog } from "../services/api";
 import { getTodayDate } from "../utils/date";
+import { isValidHM } from "../services/mealTimes";
+import {
+  getKalendarPodesavanja,
+  setKalendarPodesavanja,
+  upisiTreninge,
+  ukloniTreninge,
+  listaKalendara,
+  opisKalendara,
+  kalendarDostupan,
+  type KalendarPodesavanja,
+  type KalendarOpcija,
+} from "../services/calendar";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
@@ -11,10 +23,85 @@ export default function WorkoutPlanScreen() {
   const [fullPlan, setFullPlan] = useState<any>(null);
   const [tab, setTab] = useState<"teretana" | "street_workout">("teretana");
   const [loggedToday, setLoggedToday] = useState<string[]>([]);
+  const [kal, setKal] = useState<KalendarPodesavanja | null>(null);
+  const [kalVreme, setKalVreme] = useState("18:00");
+  const [kalRadi, setKalRadi] = useState(false);
+  const [kalNaziv, setKalNaziv] = useState<string | null>(null);
+  const [kalOpcije, setKalOpcije] = useState<KalendarOpcija[] | null>(null);
 
   useEffect(() => {
     checkProfileAndPlan();
+    getKalendarPodesavanja().then((p) => {
+      setKal(p);
+      setKalVreme(p.vreme);
+      setTab(p.tip);
+      // Naziv kalendara prikazujemo samo ako je dozvola već data (ne pitamo za dozvolu pri otvaranju ekrana)
+      if (p.ukljuceno && kalendarDostupan()) opisKalendara(p).then(setKalNaziv);
+    });
   }, []);
+
+  const otvoriIzborKalendara = async () => {
+    try {
+      const lista = await listaKalendara();
+      if (!lista.length) {
+        Alert.alert("Kalendar", "Na telefonu nema kalendara u koji se može upisivati. Dodaj Google nalog u Podešavanjima telefona.");
+        return;
+      }
+      setKalOpcije(lista);
+    } catch (e: any) {
+      Alert.alert("Kalendar", e?.message || "Ne mogu da pročitam listu kalendara.");
+    }
+  };
+
+  const izaberiKalendar = async (o: KalendarOpcija) => {
+    const p = { ...(kal ?? (await getKalendarPodesavanja())), kalendarId: o.id } as KalendarPodesavanja;
+    await setKalendarPodesavanja(p);
+    setKal(p);
+    setKalNaziv(o.nalog && o.nalog !== o.naziv ? `${o.naziv} (${o.nalog})` : o.naziv);
+    setKalOpcije(null);
+  };
+
+  const handleUpisiUKalendar = async (plan = fullPlan, tiho = false) => {
+    if (!isValidHM(kalVreme)) {
+      Alert.alert("Greška", "Vreme treninga upiši kao HH:MM, npr. 18:00");
+      return;
+    }
+    const p: KalendarPodesavanja = { ...(kal ?? { trajanjeMin: 60 }), ukljuceno: true, vreme: kalVreme, tip: tab } as KalendarPodesavanja;
+    setKalRadi(true);
+    try {
+      const { broj, kalendar } = await upisiTreninge(plan, p);
+      await setKalendarPodesavanja(p);
+      setKal(p);
+      opisKalendara(p).then(setKalNaziv);
+      if (!tiho) {
+        Alert.alert(
+          "Upisano u kalendar",
+          broj > 0
+            ? `${broj} treninga za narednih 7 dana u ${kalVreme}, u kalendar "${kalendar}". Podsetnik 30 min pre. Google kalendaru ponekad treba minut da se sinhronizuje.`
+            : "Nema treninga u narednih 7 dana (svi su dani odmora ili je vreme prošlo)."
+        );
+      }
+    } catch (e: any) {
+      Alert.alert("Kalendar", e?.message || "Upis u kalendar nije uspeo.");
+    } finally {
+      setKalRadi(false);
+    }
+  };
+
+  const handleUkloniIzKalendara = async () => {
+    setKalRadi(true);
+    try {
+      await ukloniTreninge(kal as KalendarPodesavanja);
+      const p = { ...(kal as KalendarPodesavanja), ukljuceno: false };
+      await setKalendarPodesavanja(p);
+      setKal(p);
+      Alert.alert("Uklonjeno", "Budući ReelFuel treninzi su obrisani iz kalendara.");
+    } catch (e: any) {
+      Alert.alert("Kalendar", e?.message || "Brisanje nije uspelo.");
+    } finally {
+      setKalRadi(false);
+    }
+  };
 
   const checkProfileAndPlan = async () => {
     try {
@@ -43,6 +130,10 @@ export default function WorkoutPlanScreen() {
     try {
       const data = await generateWorkoutPlan();
       setFullPlan(data.plan);
+      // Ako je kalendar uključen, novi plan odmah zameni stare treninge u kalendaru
+      if (kal?.ukljuceno && Platform.OS !== "web") {
+        await handleUpisiUKalendar(data.plan, true);
+      }
     } catch (err) {
       Alert.alert("Greška", "Nije uspelo generisanje plana. Proveri da li imaš sačuvan profil.");
     } finally {
@@ -110,6 +201,67 @@ export default function WorkoutPlanScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {Platform.OS !== "web" && (
+            <View style={[common.card, { marginBottom: 20 }]}>
+              <Text style={[typography.body, { fontWeight: "800" }]}>📅 Kalendar</Text>
+              <Text style={[typography.bodySecondary, { marginTop: 4, marginBottom: 12 }]}>
+                Upisuje {tab === "teretana" ? "teretana" : "street workout"} treninge za narednih 7 dana u tvoj Google
+                kalendar. Aplikacija menja samo svoje treninge (oznaka #ReelFuel), tvoje ostale obaveze ne dira.
+                {kal?.ukljuceno ? " Uključeno — novi plan se sam upisuje." : ""}
+              </Text>
+              <View style={[common.rowBetween, { marginBottom: 12 }]}>
+                <Text style={[typography.bodySecondary, { flex: 1 }]} numberOfLines={2}>
+                  Kalendar: {kalNaziv ?? "glavni Google kalendar"}
+                </Text>
+                <TouchableOpacity onPress={otvoriIzborKalendara} disabled={kalRadi}>
+                  <Text style={[typography.bodySecondary, { color: colors.primary, fontWeight: "700" }]}>Promeni</Text>
+                </TouchableOpacity>
+              </View>
+              {kalOpcije && (
+                <View style={{ marginBottom: 12, gap: 8 }}>
+                  {kalOpcije.map((o) => (
+                    <TouchableOpacity
+                      key={o.id}
+                      style={[styles.kalOpcija, kal?.kalendarId === o.id && styles.kalOpcijaActive]}
+                      onPress={() => izaberiKalendar(o)}
+                    >
+                      <Text style={typography.body}>{o.naziv}</Text>
+                      <Text style={typography.bodySecondary}>
+                        {o.nalog}
+                        {o.google ? " · Google" : " · samo na telefonu"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              <View style={[common.rowBetween, { gap: 10 }]}>
+                <Text style={typography.bodySecondary}>Vreme treninga</Text>
+                <TextInput
+                  style={[common.input, { marginBottom: 0, width: 100, textAlign: "center" }]}
+                  value={kalVreme}
+                  onChangeText={setKalVreme}
+                  placeholder="18:00"
+                  placeholderTextColor={colors.textSecondary}
+                  maxLength={5}
+                />
+              </View>
+              <TouchableOpacity
+                style={[common.primaryButton, { marginTop: 12 }]}
+                onPress={() => handleUpisiUKalendar()}
+                disabled={kalRadi}
+              >
+                <Text style={common.primaryButtonText}>
+                  {kalRadi ? "Radim..." : kal?.ukljuceno ? "🔄 Osveži kalendar" : "📅 Upiši treninge u kalendar"}
+                </Text>
+              </TouchableOpacity>
+              {kal?.ukljuceno && (
+                <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }} onPress={handleUkloniIzKalendara} disabled={kalRadi}>
+                  <Text style={typography.bodySecondary}>Ukloni treninge iz kalendara</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {activePlan?.tip_splita && (
             <View style={[styles.splitCard]}>
@@ -190,4 +342,6 @@ const styles = StyleSheet.create({
   },
   checkBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   checkBtnText: { fontSize: 15, fontWeight: "700" },
+  kalOpcija: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+  kalOpcijaActive: { borderColor: colors.primary },
 });

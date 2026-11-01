@@ -6,9 +6,12 @@ from app.services.transcription import transcribe_audio
 from app.services.pose_analysis import analyze_video
 from app.services.exercise_extractor import extract_exercise
 from app.models.database import get_db, Exercise
+from app.core.url_guard import require_allowed_url
+import logging
 import os
 import shutil
 
+log = logging.getLogger("exercise")
 router = APIRouter()
 
 
@@ -18,6 +21,7 @@ class ExerciseRequest(BaseModel):
 
 @router.post("/")
 def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
+    request.url = require_allowed_url(request.url)
     video_path = None
     frame_paths = []
     try:
@@ -51,8 +55,9 @@ def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
             "exercise": exercise_data,
             "exercise_id": db_exercise.id,
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        log.exception("Obrada vezbe nije uspela")
+        raise HTTPException(status_code=500, detail="Obrada linka nije uspela")
     finally:
         if video_path and os.path.exists(video_path):
             os.remove(video_path)
