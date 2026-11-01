@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-01. Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-01 (faza 8). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -18,7 +18,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
                                                        └─ Anthropic API     (claude-haiku-4-5-20251001, tool calling u chatu)
 ```
 - **Backend**: Python 3.13, FastAPI, uvicorn, SQLAlchemy + SQLite (bez migracija), BackgroundTasks + `threading.Semaphore` za ingest.
-- **Mobile**: Expo SDK 57, Expo Router (`src/app`), React Native, TypeScript, `expo-share-intent@8`, `expo-notifications`, `expo-image-picker`, AsyncStorage.
+- **Mobile**: Expo SDK 57, Expo Router (`src/app`), React Native, TypeScript, `expo-share-intent@8`, `expo-notifications`, `expo-clipboard`, `expo-image-picker`, AsyncStorage.
 - **Build/pokretanje**: EAS development build (ne Expo Go). Web verzija (`npx expo start` → w) služi za brzo testiranje.
 - **Auth**: zajednički `X-API-Key` (`APP_SECRET_KEY` ↔ `EXPO_PUBLIC_API_KEY`). Nije prava sigurnost.
 
@@ -26,11 +26,12 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 | Faza | Sadržaj | Status |
 |---|---|---|
 | Osnova | Recepti (link + ručno), vežbe (link + ručno), profil, plan ishrane (7 dana), plan treninga (gym + street), dnevnik hrane/treninga, težina + grafikon, lista za kupovinu, nedeljni izveštaj, chat sa alatima | Radi (potvrđeno) |
-| 0 | Share-intent ingest (`ingest.tsx`, `IngestJob`), auto-klasifikacija recept/vežba | Implementirano; potvrđeno samo na webu. **Share iz Instagrama na telefonu nije eksplicitno potvrđen.** |
+| 0 | Share-intent ingest (`ingest.tsx`, `IngestJob`), auto-klasifikacija recept/vežba | Potvrđeno na telefonu (2026-11-01) |
 | 1 | Plan kao podrazumevani dnevnik: stanja obroka `ceka/procena/pojeo/zamenjeno/preskoceno`, `zamena.tsx`, `dan` ruta | Potvrđeno radi |
-| 2 | Podsetnici u vreme obroka (`notifications.ts`, `podsetnici.tsx`), dugmad "Slikaj / unesi", "Po planu", "Preskočio"; foto obrok (`meal_photo.py`) | Radi; **prava dugmad u notifikaciji na telefonu nisu eksplicitno potvrđena** |
+| 2 | Podsetnici u vreme obroka (`notifications.ts`, `podsetnici.tsx`), dugmad "Slikaj / unesi", "Po planu", "Preskočio"; foto obrok (`meal_photo.py`) | Potvrđeno na telefonu (2026-11-01) |
 | 3 | Automatski nedeljni plan (`nedelja_plan.py`), korekcija kalorijskog cilja (`kalorijska_korekcija.py`), `NedeljaIKorekcija.tsx` | Potvrđeno radi |
 | 4 | Health Connect (sat/vaga) | **Preskočeno** — korisnik nema uređaje; kod nije primenjen, `app.json` nepromenjen |
+| 8 | Spremno za pregled, link iz clipboard-a, plan po datumima, lista iz recepta (vidi 6d) | Napisano, testiran backend; telefon nije proveren |
 | 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **Nije započeto.** Istraženo: Oracle Always Free (2 OCPU/12 GB posle smanjenja iz juna 2026), Hetzner CX23 (~€4–6/mes), Contabo. Odluka odložena ("prvo automatizacija"). |
 
 ## 4. Backend: rute (prefiksi iz `main.py`)
@@ -45,7 +46,7 @@ Kalorijski cilj = Mifflin-St Jeor + aktivnost + cilj + prihvaćene korekcije, ra
 
 ## 6. Mobile: ekrani
 Tabovi `(tabs)/`: `index` (početna), `dnevnik`, `chat`, `profil`.
-Ostalo: `ingest`, `zamena`, `podsetnici`, `dodaj-u-plan`, `settings`, `recipes`, `recipe-input|manual|result`, `exercises`, `exercise-input|manual|result`, `meal-plan`, `workout-plan`, `shopping-list`, `weekly-report`, `+native-intent`.
+Ostalo: `ingest`, `pregled`, `zamena`, `podsetnici`, `dodaj-u-plan`, `settings`, `recipes`, `recipe-input|manual|result`, `exercises`, `exercise-input|manual|result`, `meal-plan`, `workout-plan`, `shopping-list`, `weekly-report`, `+native-intent`.
 `_layout.tsx` renderuje `<NotificationHandler />` i obrađuje share intent (`useShareIntent`). Boje: primary `#7CFF3D`, secondary `#1BBE6D`, background `#141414`.
 
 ## 6a. Faza 6 — popravke i bezbednost (2026-11-01)
@@ -78,11 +79,20 @@ Ostalo: `ingest`, `zamena`, `podsetnici`, `dodaj-u-plan`, `settings`, `recipes`,
 - `apiConfig.ts`: automatska adresa backenda iz Expo adrese — ne kuca se IP posle promene mreže. Podešavanja servera: Automatski / Ručno + "Testiraj vezu".
 - Provereno: `tsc` prolazi, `start.ps1` se parsira bez grešaka i bira Wi-Fi (ne WSL) adresu. Skripta i auto-adresa **nisu pokrenute end-to-end na telefonu**.
 
+## 6d. Faza 8 — automatizacija unosa (2026-11-01)
+Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifikacije, kalendar, start skripta).
+- **Spremno za pregled** (`mobile/src/app/pregled.tsx`): sve obrade linkova koje nisu sačuvane/odbačene. ✓ čuva, ✕ odbacuje, "Sačuvaj sve", tap otvara `ingest?job_id=...`. Početna prikazuje baner "📥 Spremno za pregled" kad nešto čeka. Ekran obrade više ne traži da se ostane na njemu.
+  - Backend: `GET /ingest/` (lista: u_toku/gotovo/potrebna_odluka/greska, bez sacuvano_id), `POST /ingest/{id}/odbaci` (status `odbaceno`), `GET /ingest/{id}` sada vraća i `url`.
+- **Link iz clipboard-a** (`services/clipboardLink.ts`, `expo-clipboard`): kad se aplikacija otvori/vrati u prvi plan, ako je u clipboard-u Instagram/TikTok link koji još nije ponuđen → pitanje "Da obradim ovaj reel?". Isti link se nudi samo jednom (AsyncStorage). Modul se učitava lenjo → **treba novi EAS build**; stari build samo ne nudi link.
+- **Plan po datumima**: novi plan ima `plan_data.nedelja_od` (ponedeljak). `plan_za_datum(db, datum)` u `daily_nutrition.py` bira najnoviji plan čija nedelja počinje najkasnije u nedelji tog datuma → prošle nedelje u dnevniku zadržavaju svoj plan; budući dani koriste najnoviji. Stari planovi bez ključa koriste nedelju iz `created_at`. Koriste ga `/dan`, `/plan/slotovi`, `/plan/ubaci`. Bez izmene šeme baze.
+- **Lista za kupovinu iz recepta**: dugme "🛒 Dodaj sastojke u listu za kupovinu" u `recipe-result.tsx`. `generate-from-recipe` sada **dodaje** u postojeću listu (ranije je brisala sve) i preskače namirnice koje su već na listi (nekupljene).
+- Provereno: `tsc --noEmit` prolazi; backend testiran na KOPIJI baze (TestClient): prošla nedelja vraća stari plan, lista za pregled/odbaci/save, dodavanje u listu bez duplikata. **Na telefonu još nije provereno** (clipboard traži novi build).
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
-- Ruta `shoppinglist/generate-from-recipe` postoji, ali je nijedan ekran ne koristi.
 - Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
-- Nedeljni plan je vezan za nazive dana (ponedeljak…nedelja), ne za datume — stari plan se "ponavlja" svake nedelje.
+- Ubacivanje recepta (`/plan/ubaci`) u dan sledeće nedelje menja tekući plan; kad se napravi plan za sledeću nedelju, ta izmena se gubi.
+- `/shoppinglist/generate` (iz nedeljnog plana) i dalje briše celu listu, uključujući stavke dodate iz recepta.
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
@@ -97,8 +107,7 @@ Bezbednost / operativno:
 
 ## 8. Roadmap / ideje (po prioritetu)
 1. Rotirati ključeve; README, logo.
-2. Potvrditi na telefonu: share iz Instagrama/TikToka, dugmad u notifikaciji, izmene iz faze 6.
-3. "Spremno za pregled" lista (sve što je ingest obradio čeka potvrdu jednim tapom); detekcija linka iz clipboard-a.
+2. Novi EAS build (expo-clipboard) i provera faze 8 na telefonu.
 5. Faza 5: hosting (VPS), HTTPS, prava autentikacija (nalozi/JWT), push preko FCM, cron za nedeljni plan.
 7. Ideje: kalendar B (raspored treninga po slobodnim terminima), deljenje liste za kupovinu, export/backup, vreme/vremenski uslovi za trening, Health Connect ako korisnik dobije uređaj.
 

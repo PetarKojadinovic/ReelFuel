@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { getProfile, listRecipes, getDayLog } from "../../services/api";
+import { getProfile, listRecipes, getDayLog, getIngestPregled } from "../../services/api";
 import { getTodayDate } from "../../utils/date";
 import { colors } from "../../theme";
 import { common, typography, spacing, radius } from "../../styles/common";
@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const [dnevniCilj, setDnevniCilj] = useState<number | null>(null);
   const [uneto, setUneto] = useState(0);
   const [brojRecepata, setBrojRecepata] = useState(0);
+  const [pregled, setPregled] = useState({ spremno: 0, ukupno: 0 });
 
   useFocusEffect(
     useCallback(() => {
@@ -21,6 +22,9 @@ export default function HomeScreen() {
   );
 
   const load = async () => {
+    getIngestPregled()
+      .then((s) => setPregled({ spremno: s.filter((x) => x.status === "gotovo").length, ukupno: s.length }))
+      .catch(() => {});
     try {
       const [profileData, recipesData, logData] = await Promise.all([
         getProfile(),
@@ -65,6 +69,20 @@ export default function HomeScreen() {
           <View style={[styles.progressFill, { width: `${progres * 100}%` }]} />
         </View>
       </View>
+
+      {pregled.ukupno > 0 && (
+        <TouchableOpacity style={[common.card, styles.pregledCard]} onPress={() => router.push("/pregled")}>
+          <Text style={styles.gridIcon}>📥</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pregledTitle}>Spremno za pregled</Text>
+            <Text style={typography.bodySecondary}>
+              {pregled.spremno > 0 ? `${pregled.spremno} spremno` : "Obrada u toku"}
+              {pregled.ukupno > pregled.spremno ? ` · ${pregled.ukupno - pregled.spremno} ostalo` : ""}
+            </Text>
+          </View>
+          <Text style={styles.pregledArrow}>›</Text>
+        </TouchableOpacity>
+      )}
 
       <NedeljaIKorekcija onChanged={load} />
 
@@ -137,6 +155,9 @@ const styles = StyleSheet.create({
   gridCard: { width: "47%", marginBottom: 0 },
   gridIcon: { fontSize: 24, marginBottom: 8 },
   gridValue: { fontSize: 18, fontWeight: "700", color: colors.textPrimary, marginTop: 4 },
+  pregledCard: { flexDirection: "row", alignItems: "center", gap: 12, borderColor: colors.primary },
+  pregledTitle: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
+  pregledArrow: { fontSize: 26, color: colors.primary },
   quoteCard: { backgroundColor: colors.surfaceAlt, borderRadius: 14, padding: 16, marginBottom: 20 },
   quoteText: { fontSize: 14, color: colors.textSecondary, fontStyle: "italic", textAlign: "center" },
 });

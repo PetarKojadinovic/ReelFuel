@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from app.models.database import FoodLogEntry, MealPlan, UserProfile
@@ -43,8 +43,37 @@ def dnevni_cilj(profile) -> Optional[int]:
     return round(tdee - 500) if profile.cilj == "mrsavljenje" else round(tdee)
 
 
+def week_start(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def plan_week_start(plan) -> Optional[date]:
+    """Ponedeljak nedelje za koju je plan napravljen ("nedelja_od" u plan_data, inace iz created_at)."""
+    od = (plan.plan_data or {}).get("nedelja_od")
+    if od:
+        try:
+            return date.fromisoformat(od)
+        except ValueError:
+            pass
+    return week_start(plan.created_at.date()) if plan.created_at else None
+
+
+def plan_za_datum(db, datum: str):
+    """Plan koji vazi za dati datum: najnoviji plan cija nedelja pocinje najkasnije u nedelji tog datuma.
+
+    Prosle nedelje tako zadrzavaju svoj plan (istorija se ne menja kad se napravi novi),
+    a buduci dani koriste najnoviji plan dok se ne napravi plan za tu nedelju.
+    """
+    ws = week_start(date.fromisoformat(datum))
+    for plan in db.query(MealPlan).order_by(MealPlan.id.desc()).all():
+        pws = plan_week_start(plan)
+        if pws is not None and pws <= ws:
+            return plan
+    return None
+
+
 def day_plan(db, datum: str):
-    plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
+    plan = plan_za_datum(db, datum)
     if not plan:
         return None
     target = DANI[date.fromisoformat(datum).weekday()]

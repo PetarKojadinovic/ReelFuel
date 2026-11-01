@@ -50,12 +50,62 @@ def start(req: IngestRequest, background: BackgroundTasks, db: Session = Depends
     return {"job_id": job.id, "status": "u_toku"}
 
 
+# Statusi koji se prikazuju u listi "Spremno za pregled"
+PREGLED_STATUSI = ("u_toku", "gotovo", "potrebna_odluka", "greska")
+
+
+def _naziv(job: IngestJob) -> Optional[str]:
+    r = job.rezultat or {}
+    return r.get("naziv_jela") or r.get("naziv_vezbe")
+
+
+@router.get("/")
+def pregled(db: Session = Depends(get_db)):
+    """Sve sto je obrada vratila, a korisnik jos nije sacuvao ni odbacio."""
+    jobs = (
+        db.query(IngestJob)
+        .filter(IngestJob.status.in_(PREGLED_STATUSI), IngestJob.sacuvano_id.is_(None))
+        .order_by(IngestJob.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return {
+        "stavke": [
+            {
+                "id": j.id,
+                "url": j.url,
+                "status": j.status,
+                "faza": j.faza,
+                "tip": j.tip,
+                "naziv": _naziv(j),
+                "greska": j.greska,
+                "created_at": j.created_at.isoformat() if j.created_at else None,
+            }
+            for j in jobs
+        ]
+    }
+
+
+@router.post("/{job_id}/odbaci")
+def odbaci(job_id: str, db: Session = Depends(get_db)):
+    job = db.get(IngestJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Posao nije pronađen")
+    if job.status == "u_toku":
+        raise HTTPException(status_code=400, detail="Obrada još traje")
+    if not job.sacuvano_id:
+        job.status = "odbaceno"
+        db.commit()
+    return {"ok": True}
+
+
 @router.get("/{job_id}")
 def status(job_id: str, db: Session = Depends(get_db)):
     job = db.get(IngestJob, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Posao nije pronađen")
     return {
+        "url": job.url,
         "status": job.status,
         "faza": job.faza,
         "tip": job.tip,

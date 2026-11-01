@@ -46,17 +46,24 @@ def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depen
     if not recipe:
         raise HTTPException(status_code=404, detail="Recept nije pronadjen")
 
-    db.query(ShoppingListItem).delete()
-    db.commit()
-
+    # Dodaje u postojecu listu (ne brise je); preskace namirnice koje su vec na listi i nisu kupljene
+    vec_ima = {
+        (i.naziv or "").strip().lower()
+        for i in db.query(ShoppingListItem).filter(ShoppingListItem.checked == False).all()  # noqa: E712
+    }
+    dodato = 0
     for s in recipe.sastojci or []:
-        naziv = (s.get("naziv") or "").strip()
-        if not naziv:
+        if not isinstance(s, dict):
             continue
+        naziv = (s.get("naziv") or "").strip()
+        if not naziv or naziv.lower() in vec_ima:
+            continue
+        vec_ima.add(naziv.lower())
         db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False))
+        dodato += 1
     db.commit()
 
-    return {"items": _items_response(db), "naziv_jela": recipe.naziv_jela}
+    return {"items": _items_response(db), "naziv_jela": recipe.naziv_jela, "dodato": dodato}
 
 
 @router.get("/")
