@@ -1,5 +1,7 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useState } from "react";
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { generateShoppingListFromRecipe } from "../services/api";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
@@ -15,6 +17,27 @@ export default function RecipeResultScreen() {
 
   const sastojci: any[] = Array.isArray(recipe.sastojci) ? recipe.sastojci : [];
   const koraci: string[] = Array.isArray(recipe.koraci) ? recipe.koraci : [];
+  const [dodajem, setDodajem] = useState(false);
+
+  const dodajUListu = async () => {
+    setDodajem(true);
+    try {
+      const r = await generateShoppingListFromRecipe(recipe.id);
+      const dodato = r?.dodato ?? 0;
+      Alert.alert(
+        "Lista za kupovinu",
+        dodato > 0 ? `Dodato namirnica: ${dodato}` : "Sve namirnice su već na listi.",
+        [
+          { text: "OK", style: "cancel" },
+          { text: "Otvori listu", onPress: () => router.push("/shopping-list") },
+        ]
+      );
+    } catch {
+      Alert.alert("Greška", "Nije uspelo dodavanje u listu za kupovinu.");
+    } finally {
+      setDodajem(false);
+    }
+  };
 
   return (
     <ScrollView style={[common.container, { padding: 20 }]}>
@@ -49,12 +72,25 @@ export default function RecipeResultScreen() {
       {recipe.priblizne_kalorije && <Text style={styles.calories}>Kalorije: {recipe.priblizne_kalorije}</Text>}
 
       {recipe.id != null && (
-        <TouchableOpacity
-          style={[common.primaryButton, { marginTop: 16, marginBottom: 40 }]}
-          onPress={() => router.push({ pathname: "/dodaj-u-plan", params: { recipe_id: String(recipe.id) } })}
-        >
-          <Text style={common.primaryButtonText}>📅 Dodaj u plan</Text>
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity
+            style={[common.primaryButton, { marginTop: 16 }]}
+            onPress={() => router.push({ pathname: "/dodaj-u-plan", params: { recipe_id: String(recipe.id) } })}
+          >
+            <Text style={common.primaryButtonText}>📅 Dodaj u plan</Text>
+          </TouchableOpacity>
+          {sastojci.length > 0 && (
+            <TouchableOpacity
+              style={[common.secondaryButton, { marginTop: 12, marginBottom: 40 }]}
+              onPress={dodajUListu}
+              disabled={dodajem}
+            >
+              <Text style={common.secondaryButtonText}>
+                {dodajem ? "Dodajem..." : "🛒 Dodaj sastojke u listu za kupovinu"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </ScrollView>
   );

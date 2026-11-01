@@ -131,7 +131,7 @@ class IngestJob(Base):
     id = Column(String, primary_key=True)
     url = Column(String)
     url_norm = Column(String, index=True)
-    status = Column(String, default="u_toku")  # u_toku, gotovo, greska, potrebna_odluka
+    status = Column(String, default="u_toku")  # u_toku, gotovo, greska, potrebna_odluka, odbaceno
     faza = Column(String, default="")
     tip = Column(String, nullable=True)  # recept ili vezba
     rezultat = Column(JSON, nullable=True)

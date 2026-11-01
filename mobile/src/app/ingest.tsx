@@ -1,49 +1,76 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { startIngest, getIngestJob, saveIngestJob } from "../services/api";
+import { startIngest, getIngestJob, saveIngestJob, odbaciIngestJob } from "../services/api";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
 const TIMEOUT_MS = 10 * 60 * 1000;
 
 export default function IngestScreen() {
-  const { url } = useLocalSearchParams<{ url: string }>();
+  // url = novi link za obradu; job_id = otvaranje postojece obrade iz liste "Spremno za pregled"
+  const { url, job_id } = useLocalSearchParams<{ url?: string; job_id?: string }>();
   const [job, setJob] = useState<any>({ status: "u_toku", faza: "Šaljem link" });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const startedFor = useRef<string | null>(null);
   const alive = useRef(true);
 
+  const poll = async (id: string) => {
+    const started = Date.now();
+    while (alive.current) {
+      const j = await getIngestJob(id);
+      setJob({ ...j, id });
+      if (j.status !== "u_toku") break;
+      if (Date.now() - started > TIMEOUT_MS) throw new Error("Obrada predugo traje (timeout)");
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  };
+
   const run = async (tip?: "recept" | "vezba") => {
+    const link = url || job.url;
     setError(null);
     setJob({ status: "u_toku", faza: "Šaljem link" });
     try {
-      const { job_id } = await startIngest(url as string, tip);
-      const started = Date.now();
-      while (alive.current) {
-        const j = await getIngestJob(job_id);
-        setJob({ ...j, id: job_id });
-        if (j.status !== "u_toku") break;
-        if (Date.now() - started > TIMEOUT_MS) throw new Error("Obrada predugo traje (timeout)");
-        await new Promise((r) => setTimeout(r, 2000));
-      }
+      if (!link) throw new Error("Nema linka za obradu");
+      const r = await startIngest(link, tip);
+      await poll(r.job_id);
     } catch (e: any) {
       console.log("INGEST GRESKA:", e?.message, e);
       if (alive.current) setError(`Greška: ${e?.message || "nepoznata"}`);
     }
   };
 
+  const otvori = async (id: string) => {
+    setError(null);
+    try {
+      await poll(id);
+    } catch (e: any) {
+      if (alive.current) setError(`Greška: ${e?.message || "nepoznata"}`);
+    }
+  };
+
   useEffect(() => {
     alive.current = true;
-    if (url && startedFor.current !== url) {
-      startedFor.current = url;
-      run();
+    const key = job_id ? `job:${job_id}` : url ? `url:${url}` : null;
+    if (key && startedFor.current !== key) {
+      startedFor.current = key;
+      if (job_id) otvori(job_id);
+      else run();
     }
     return () => {
       alive.current = false;
     };
-  }, [url]);
+  }, [url, job_id]);
+
+  const handleOdbaci = async () => {
+    try {
+      if (job.id) await odbaciIngestJob(job.id);
+    } catch {
+      // nije bitno ako ne uspe - stavka ostaje u listi za pregled
+    }
+    router.back();
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -129,7 +156,7 @@ export default function IngestScreen() {
         <TouchableOpacity style={common.primaryButton} onPress={handleSave} disabled={saving}>
           <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj"}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{ marginTop: 14, alignItems: "center" }} onPress={() => router.back()}>
+        <TouchableOpacity style={{ marginTop: 14, alignItems: "center" }} onPress={handleOdbaci}>
           <Text style={typography.bodySecondary}>Odbaci</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -141,7 +168,7 @@ export default function IngestScreen() {
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={[typography.body, { marginTop: 20 }]}>{job.faza || "Obrađujem..."}</Text>
       <Text style={[typography.bodySecondary, { marginTop: 8, textAlign: "center" }]}>
-        Ostani na ovom ekranu dok se obrada ne završi.
+        Možeš da izađeš — rezultat će te čekati na početnoj, u „Spremno za pregled".
       </Text>
     </View>
   );

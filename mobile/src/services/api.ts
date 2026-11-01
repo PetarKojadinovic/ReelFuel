@@ -359,6 +359,35 @@ export async function saveIngestJob(id: string) {
   return response.json();
 }
 
+export type PregledStavka = {
+  id: string;
+  url: string;
+  status: "u_toku" | "gotovo" | "potrebna_odluka" | "greska";
+  faza: string;
+  tip: "recept" | "vezba" | null;
+  naziv: string | null;
+  greska: string | null;
+  created_at: string | null;
+};
+
+export async function getIngestPregled(): Promise<PregledStavka[]> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/ingest/`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri ucitavanju liste za pregled");
+  const data = await response.json();
+  return data?.stavke ?? [];
+}
+
+export async function odbaciIngestJob(id: string) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/ingest/${id}/odbaci`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error("Greska pri odbacivanju");
+  return response.json();
+}
+
 function nowHM() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;

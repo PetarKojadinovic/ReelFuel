@@ -16,6 +16,7 @@ from app.services.daily_nutrition import (
     OBROCI,
     _norm,
     day_summary,
+    plan_za_datum,
     to_kcal,
 )
 
@@ -67,7 +68,8 @@ def slotovi(
     for i in range(7):
         d = today + timedelta(days=i)
         ime = DANI[d.weekday()]
-        day = _find_day(plan.plan_data, ime)
+        day_src = plan_za_datum(db, d.isoformat()) or plan
+        day = _find_day(day_src.plan_data, ime)
         if not day:
             continue
         for tip in OBROCI:
@@ -113,12 +115,12 @@ class UbaciRequest(BaseModel):
 def ubaci(req: UbaciRequest, db: Session = Depends(get_db)):
     if not 0 <= req.dan_offset <= 6:
         raise HTTPException(status_code=400, detail="Dan mora biti u narednih 7 dana")
-    plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
+    d = date.today() + timedelta(days=req.dan_offset)
+    plan = plan_za_datum(db, d.isoformat())
     recipe = db.get(Recipe, req.recipe_id)
     if not plan or not recipe:
         raise HTTPException(status_code=404, detail="Plan ili recept nije pronađen")
 
-    d = date.today() + timedelta(days=req.dan_offset)
     if req.dan_offset == 0:
         marker = (
             db.query(FoodLogEntry)
