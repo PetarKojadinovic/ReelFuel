@@ -1,82 +1,107 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Switch, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import { getApiUrl, setApiUrl, getDefaultUrl } from "../services/apiConfig";
-import { getAutoPlanOn, setAutoPlanOn } from "../services/mealTimes";
+import { getApiMode, setApiMode, getAutoUrl, getManualUrl, setApiUrl, getApiUrl, type ApiMode } from "../services/apiConfig";
+import { getProfile } from "../services/api";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function SettingsScreen() {
+  const [mode, setMode] = useState<ApiMode>("auto");
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
-  const [autoPlan, setAutoPlan] = useState(true);
+  const [test, setTest] = useState<string | null>(null);
+  const autoUrl = getAutoUrl();
 
   useEffect(() => {
     (async () => {
-      setUrl(await getApiUrl());
-      setAutoPlan(await getAutoPlanOn());
+      setMode(await getApiMode());
+      setUrl(await getManualUrl());
     })();
   }, []);
 
-  const toggleAuto = async (v: boolean) => {
-    setAutoPlan(v);
-    await setAutoPlanOn(v);
+  const testiraj = async () => {
+    setTest("Proveravam...");
+    try {
+      await getProfile();
+      setTest(`✅ Povezano: ${await getApiUrl()}`);
+    } catch {
+      setTest(`❌ Nema veze sa ${await getApiUrl()}. Da li je backend pokrenut (start.ps1)?`);
+    }
   };
 
-  const handleSave = async () => {
-    if (!url.trim()) {
-      Alert.alert("Greška", "Unesi adresu servera");
+  const izaberiAuto = async () => {
+    await setApiMode("auto");
+    setMode("auto");
+    setTest(null);
+  };
+
+  const handleSaveManual = async () => {
+    if (!/^https?:\/\/\S+$/.test(url.trim())) {
+      Alert.alert("Greška", "Adresa mora počinjati sa http:// ili https://");
       return;
     }
     setSaving(true);
     try {
-      await setApiUrl(url.trim());
-      Alert.alert("Sačuvano", "Adresa servera je ažurirana.", [{ text: "OK", onPress: () => router.back() }]);
+      await setApiUrl(url.trim().replace(/\/$/, ""));
+      setMode("rucno");
+      Alert.alert("Sačuvano", "Koristi se ručno upisana adresa.", [{ text: "OK", onPress: () => router.back() }]);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = async () => {
-    const defaultUrl = getDefaultUrl();
-    setUrl(defaultUrl);
-    await setApiUrl(defaultUrl);
-  };
-
   return (
-    <View style={[common.container, { padding: 20 }]}>
+    <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
       <Text style={typography.label}>Adresa backend servera</Text>
-      <Text style={[typography.bodySecondary, { marginBottom: 12 }]}>
-        Promeni ovo kad se tvoja lokalna IP adresa promeni (npr. nova mreža/hotspot). Pokreni{" "}
-        <Text style={{ fontWeight: "700" }}>ipconfig</Text> na računaru da nađeš trenutnu IP adresu.
-      </Text>
-      <TextInput
-        style={common.input}
-        value={url}
-        onChangeText={setUrl}
-        placeholder="http://192.168.1.x:8000"
-        placeholderTextColor={colors.textSecondary}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
 
-      <TouchableOpacity style={[common.primaryButton, { marginTop: 20 }]} onPress={handleSave} disabled={saving}>
-        <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj i poveži"}</Text>
+      <TouchableOpacity style={[styles.opcija, mode === "auto" && styles.opcijaActive]} onPress={izaberiAuto}>
+        <Text style={typography.body}>🔄 Automatski (preporučeno)</Text>
+        <Text style={[typography.bodySecondary, { marginTop: 4 }]}>
+          {autoUrl
+            ? `Backend na istom računaru kao Expo: ${autoUrl}. Radi i kad promeniš mrežu ili hotspot.`
+            : "Nije dostupno u ovoj verziji aplikacije — upiši adresu ručno."}
+        </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={handleReset}>
-        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Vrati na podrazumevanu adresu</Text>
+      <TouchableOpacity style={[styles.opcija, mode === "rucno" && styles.opcijaActive]} onPress={() => setMode("rucno")}>
+        <Text style={typography.body}>✏️ Ručno</Text>
+        <Text style={[typography.bodySecondary, { marginTop: 4 }]}>Za backend na drugom računaru ili serveru.</Text>
       </TouchableOpacity>
 
-      <View style={[common.rowBetween, { marginTop: 32 }]}>
-        <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={typography.body}>Automatski plan svake nedelje</Text>
-          <Text style={typography.bodySecondary}>
-            Prvog otvaranja u novoj nedelji pravi plan ishrane, plan treninga i listu za kupovinu.
-          </Text>
-        </View>
-        <Switch value={autoPlan} onValueChange={toggleAuto} trackColor={{ true: colors.primary }} />
-      </View>
-    </View>
+      {mode === "rucno" && (
+        <>
+          <TextInput
+            style={[common.input, { marginTop: 12 }]}
+            value={url}
+            onChangeText={setUrl}
+            placeholder="http://192.168.1.x:8000"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity style={[common.primaryButton, { marginTop: 8 }]} onPress={handleSaveManual} disabled={saving}>
+            <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj ručnu adresu"}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      <TouchableOpacity style={[common.secondaryButton, { marginTop: 20 }]} onPress={testiraj}>
+        <Text style={common.secondaryButtonText}>Testiraj vezu</Text>
+      </TouchableOpacity>
+      {test && <Text style={[typography.bodySecondary, { marginTop: 12 }]}>{test}</Text>}
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  opcija: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: 10,
+  },
+  opcijaActive: { borderColor: colors.primary },
+});

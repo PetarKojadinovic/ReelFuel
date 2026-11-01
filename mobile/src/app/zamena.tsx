@@ -102,6 +102,15 @@ export default function ZamenaScreen() {
         </View>
       )}
 
+      {!analyzing && (
+        <TouchableOpacity
+          style={[common.secondaryButton, { marginBottom: 20 }]}
+          onPress={() => router.replace({ pathname: "/skener", params: { datum, obrok_tip } })}
+        >
+          <Text style={common.secondaryButtonText}>🏷️ Skeniraj bar-kod sa pakovanja</Text>
+        </TouchableOpacity>
+      )}
+
       <Text style={typography.label}>Naziv</Text>
       <TextInput
         style={common.input}

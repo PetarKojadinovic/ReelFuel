@@ -30,6 +30,8 @@ export async function saveProfile(profile: {
   nivo_aktivnosti: string;
   cilj: string;
   raspodela_kalorija: string;
+  broj_treninga_nedeljno?: number;
+  ciljna_tezina_kg?: number;
 }) {
   const API_BASE_URL = await getApiUrl();
   const response = await fetch(`${API_BASE_URL}/profile/`, {
@@ -443,6 +445,35 @@ export async function ubaciUPlan(recipeId: number, danOffset: number, obrokTip: 
     body: JSON.stringify({ recipe_id: recipeId, dan_offset: danOffset, obrok_tip: obrokTip }),
   });
   if (!response.ok) throw new Error(await serverDetail(response, "Greska pri ubacivanju u plan"));
+  return response.json();
+}
+
+export type Proizvod = {
+  pronadjen: boolean;
+  barkod: string;
+  naziv?: string;
+  kcal_100g?: number | null;
+  porcija_g?: number | null;
+  paket_g?: number | null;
+  izvor?: "openfoodfacts" | "etiketa";
+  procitano?: boolean;
+};
+
+export async function getProizvod(barkod: string): Promise<Proizvod> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/proizvod/${encodeURIComponent(barkod)}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri trazenju proizvoda"));
+  return response.json();
+}
+
+export async function procitajEtiketu(barkod: string, base64: string, naziv?: string): Promise<Proizvod> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/proizvod/${encodeURIComponent(barkod)}/etiketa`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ slika_base64: base64, media_type: "image/jpeg", naziv }),
+  });
+  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri citanju etikete"));
   return response.json();
 }
 

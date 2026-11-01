@@ -149,3 +149,16 @@ class KalorijskaKorekcija(Base):
     tezina_trend = Column(Float, nullable=True)  # kg nedeljno
     status = Column(String, default="predlog")  # predlog, prihvaceno, odbijeno, ponisteno
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Proizvod(Base):
+    """Keš proizvoda po bar-kodu (Open Food Facts ili očitana tabela sa pakovanja)."""
+    __tablename__ = "proizvod"
+
+    barkod = Column(String, primary_key=True)
+    naziv = Column(String)
+    kcal_100g = Column(Float)
+    porcija_g = Column(Float, nullable=True)
+    paket_g = Column(Float, nullable=True)
+    izvor = Column(String)  # openfoodfacts, etiketa
+    created_at = Column(DateTime, default=datetime.utcnow)
