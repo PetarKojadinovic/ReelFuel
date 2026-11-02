@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models.database import get_db, UserProfile, Recipe, MealPlan
 from app.services.meal_plan_generator import generate_weekly_plan
-from app.services.daily_nutrition import get_dnevni_cilj, week_start
+from app.services.daily_nutrition import get_dnevni_cilj, prenesi_izmene, week_start
 
 log = logging.getLogger("mealplan")
 router = APIRouter()
@@ -38,6 +38,8 @@ def generate_plan(db: Session = Depends(get_db)):
 
     # Plan je vezan za tekucu nedelju (ponedeljak), da prosle nedelje u dnevniku zadrze svoj plan
     plan_data["nedelja_od"] = week_start(date.today()).isoformat()
+    prethodni = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
+    plan_data = prenesi_izmene(prethodni.plan_data if prethodni else None, plan_data)
     db_plan = MealPlan(plan_data=plan_data)
     db.add(db_plan)
     db.commit()

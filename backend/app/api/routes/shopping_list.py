@@ -21,6 +21,14 @@ def _items_response(db: Session) -> list:
     ]
 
 
+def _nekupljeno(db: Session) -> set:
+    """Nazivi (mala slova) stavki koje su na listi i nisu kupljene."""
+    return {
+        (i.naziv or "").strip().lower()
+        for i in db.query(ShoppingListItem).filter(ShoppingListItem.checked == False).all()  # noqa: E712
+    }
+
+
 @router.post("/generate")
 def generate(db: Session = Depends(get_db)):
     plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
@@ -33,11 +41,15 @@ def generate(db: Session = Depends(get_db)):
         log.exception("Greska u shoppinglist")
         raise HTTPException(status_code=500, detail="Pravljenje liste za kupovinu nije uspelo. Pokušaj ponovo.")
 
-    db.query(ShoppingListItem).delete()
-    db.commit()
-
+    # Zamenjuju se samo stavke iz prethodnog plana; ono sto je dodato iz recepta ili rucno ostaje
+    db.query(ShoppingListItem).filter(ShoppingListItem.izvor == "plan").delete(synchronize_session="fetch")
+    vec_ima = _nekupljeno(db)
     for s in stavke:
-        db.add(ShoppingListItem(naziv=s.get("naziv"), kolicina=s.get("kolicina"), checked=False))
+        naziv = (s.get("naziv") or "").strip()
+        if not naziv or naziv.lower() in vec_ima:
+            continue
+        vec_ima.add(naziv.lower())
+        db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False, izvor="plan"))
     db.commit()
 
     return {"items": _items_response(db)}
@@ -50,10 +62,7 @@ def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depen
         raise HTTPException(status_code=404, detail="Recept nije pronadjen")
 
     # Dodaje u postojecu listu (ne brise je); preskace namirnice koje su vec na listi i nisu kupljene
-    vec_ima = {
-        (i.naziv or "").strip().lower()
-        for i in db.query(ShoppingListItem).filter(ShoppingListItem.checked == False).all()  # noqa: E712
-    }
+    vec_ima = _nekupljeno(db)
     dodato = 0
     for s in recipe.sastojci or []:
         if not isinstance(s, dict):
@@ -62,7 +71,7 @@ def generate_from_recipe(request: GenerateFromRecipeRequest, db: Session = Depen
         if not naziv or naziv.lower() in vec_ima:
             continue
         vec_ima.add(naziv.lower())
-        db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False))
+        db.add(ShoppingListItem(naziv=naziv, kolicina=s.get("kolicina"), checked=False, izvor="recept"))
         dodato += 1
     db.commit()
 
