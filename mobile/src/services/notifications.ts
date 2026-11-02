@@ -117,12 +117,12 @@ export async function handleNotificationResponse(response: Notifications.Notific
     } catch {
       Alert.alert("Greška", "Nije uspelo čuvanje. Potvrdi obrok ručno u Dnevniku.");
     }
-    router.push("/dnevnik");
+    router.navigate("/");
   } else if (tip) {
     // Dugme "Slikaj / unesi" ili dodir na samu notifikaciju
     router.push({ pathname: "/zamena", params: { datum, obrok_tip: tip } });
   } else {
-    router.push("/dnevnik");
+    router.navigate("/");
   }
 }
 

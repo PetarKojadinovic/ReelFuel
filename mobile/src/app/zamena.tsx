@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -7,7 +7,7 @@ import { colors } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function ZamenaScreen() {
-  const { datum, obrok_tip } = useLocalSearchParams<{ datum: string; obrok_tip?: string }>();
+  const { datum, obrok_tip, odmah } = useLocalSearchParams<{ datum: string; obrok_tip?: string; odmah?: string }>();
   const [naziv, setNaziv] = useState("");
   const [kalorije, setKalorije] = useState("");
   const [info, setInfo] = useState<any>(null);
@@ -60,6 +60,15 @@ export default function ZamenaScreen() {
     }
   };
 
+  // Iz panela "+" → "Slikaj obrok": odmah otvori kameru
+  const kameraPokrenuta = useRef(false);
+  useEffect(() => {
+    if (odmah === "slika" && !kameraPokrenuta.current) {
+      kameraPokrenuta.current = true;
+      takePhoto();
+    }
+  }, [odmah]);
+
   const confirm = async () => {
     const kcal = parseInt(kalorije, 10);
     if (!naziv.trim() || isNaN(kcal) || kcal < 0 || kcal > 5000) {
@@ -73,7 +82,8 @@ export default function ZamenaScreen() {
       } else {
         await addLogEntry({ datum: datum as string, naziv: naziv.trim(), kalorije: kcal, izvor: "slobodan" });
       }
-      router.replace("/dnevnik");
+      if (router.canGoBack()) router.back();
+      else router.replace("/");
     } catch {
       Alert.alert("Greška", "Nije uspelo čuvanje.");
     } finally {
@@ -84,7 +94,8 @@ export default function ZamenaScreen() {
   return (
     <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
       <Text style={[typography.title, { marginBottom: 8 }]}>
-          {obrok_tip ? "Šta si pojeo?" : "Dodaj obrok"}      </Text>
+        {obrok_tip ? "Šta si pojeo umesto toga?" : "Šta si pojeo?"}
+      </Text>
       <Text style={[typography.bodySecondary, { marginBottom: 20 }]}>
         Slikaj tanjir da dobiješ procenu, ili unesi ručno.
       </Text>
@@ -94,10 +105,10 @@ export default function ZamenaScreen() {
       ) : (
         <View style={styles.photoRow}>
           <TouchableOpacity style={[common.secondaryButton, styles.photoBtn]} onPress={takePhoto}>
-            <Text style={common.secondaryButtonText}>📷 Slikaj</Text>
+            <Text style={common.secondaryButtonText}>Slikaj</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[common.secondaryButton, styles.photoBtn]} onPress={pickFromGallery}>
-            <Text style={common.secondaryButtonText}>🖼️ Iz galerije</Text>
+            <Text style={common.secondaryButtonText}>Iz galerije</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -107,7 +118,7 @@ export default function ZamenaScreen() {
           style={[common.secondaryButton, { marginBottom: 20 }]}
           onPress={() => router.replace({ pathname: "/skener", params: { datum, obrok_tip } })}
         >
-          <Text style={common.secondaryButtonText}>🏷️ Skeniraj bar-kod sa pakovanja</Text>
+          <Text style={common.secondaryButtonText}>Skeniraj bar-kod sa pakovanja</Text>
         </TouchableOpacity>
       )}
 

@@ -7,7 +7,7 @@ import type { BarcodeScanningResult } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { getProizvod, procitajEtiketu, danAkcija, addLogEntry, type Proizvod } from "../services/api";
 import { getTodayDate } from "../utils/date";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 type Faza = "skeniram" | "trazim" | "nadjen" | "nije_nadjen" | "citam";
@@ -148,7 +148,8 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
       } else {
         await addLogEntry({ datum, naziv, kalorije: kcal, izvor: "slobodan" });
       }
-      router.replace("/dnevnik");
+      if (router.canGoBack()) router.back();
+      else router.replace("/");
     } catch {
       Alert.alert("Greška", "Nije uspelo čuvanje.");
     } finally {
@@ -227,7 +228,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
           placeholderTextColor={colors.textSecondary}
         />
         <TouchableOpacity style={[common.primaryButton, { marginTop: 16 }]} onPress={slikajEtiketu}>
-          <Text style={common.primaryButtonText}>📷 Slikaj tabelu</Text>
+          <Text style={common.primaryButtonText}>Slikaj tabelu</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[common.secondaryButton, { marginTop: 12 }]}
@@ -236,7 +237,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
           <Text style={common.secondaryButtonText}>Unesi ručno</Text>
         </TouchableOpacity>
         <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={skenirajPonovo}>
-          <Text style={typography.bodySecondary}>↩︎ Skeniraj ponovo</Text>
+          <Text style={typography.bodySecondary}>Skeniraj ponovo</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -251,7 +252,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
   return (
     <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
       <View style={common.card}>
-        <Text style={[typography.body, { fontWeight: "800", fontSize: 18 }]}>{proizvod?.naziv}</Text>
+        <Text style={[typography.body, { fontFamily: fonts.extrabold, fontSize: 18 }]}>{proizvod?.naziv}</Text>
         <Text style={[typography.bodySecondary, { marginTop: 4 }]}>
           {proizvod?.kcal_100g} kcal / 100 g ·{" "}
           {proizvod?.izvor === "etiketa" ? "pročitano sa pakovanja" : "Open Food Facts"}
@@ -288,7 +289,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
         <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Upiši u dnevnik"}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={skenirajPonovo}>
-        <Text style={typography.bodySecondary}>↩︎ Skeniraj drugi proizvod</Text>
+        <Text style={typography.bodySecondary}>Skeniraj drugi proizvod</Text>
       </TouchableOpacity>
       <Text style={styles.napomena}>
         Kalorije su sa pakovanja ili iz otvorene baze Open Food Facts i mogu se razlikovati od stvarnih.
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   uputstvoText: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: fonts.bold,
     textAlign: "center",
     textShadowColor: "#000",
     textShadowRadius: 6,
@@ -327,8 +328,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   opcijaActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  opcijaText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
+  opcijaText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.bold },
   opcijaTextActive: { color: colors.background },
-  kcal: { fontSize: 30, fontWeight: "800", color: colors.primary },
+  kcal: { fontSize: 30, fontFamily: fonts.extrabold, color: colors.primary },
   napomena: { fontSize: 12, color: colors.textSecondary, marginTop: 20, lineHeight: 18 },
 });

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getWeeklyReport } from "../services/api";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function WeeklyReportScreen() {
@@ -118,8 +118,8 @@ export default function WeeklyReportScreen() {
 const styles = StyleSheet.create({
   card: { padding: 20 },
   cardIcon: { fontSize: 24, marginBottom: 8 },
-  cardBigNumber: { fontSize: 34, fontWeight: "800", color: colors.primary },
-  cardBigNumberMuted: { fontSize: 18, color: colors.textSecondary, fontWeight: "600" },
-  cardMotivation: { fontSize: 15, color: colors.textPrimary, fontWeight: "600" },
+  cardBigNumber: { fontSize: 34, fontFamily: fonts.extrabold, color: colors.primary },
+  cardBigNumberMuted: { fontSize: 18, color: colors.textSecondary, fontFamily: fonts.semibold },
+  cardMotivation: { fontSize: 15, color: colors.textPrimary, fontFamily: fonts.semibold },
   cardNote: { fontSize: 12, color: colors.textSecondary, marginTop: 8, lineHeight: 18 },
 });

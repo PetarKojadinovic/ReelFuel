@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-01 (faza 8). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-02 (bezbednost, popravke plana/liste, testovi). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -44,10 +44,12 @@ Ključni servisi (`backend/app/services/`): `video_downloader` (download_audio/v
 `Recipe`, `UserProfile` (tezina_kg, visina_cm, godine, pol, nivo_aktivnosti, cilj, raspodela_kalorija, broj_treninga_nedeljno, ciljna_tezina_kg), `MealPlan`, `ChatMessage`, `FoodLogEntry` (izvor: slobodan / plan / zamena / preskoceno), `Exercise`, `WorkoutPlan`, `WorkoutLogEntry`, `WeightLog`, `ShoppingListItem`, `IngestJob` (status: u_toku / greska / gotov…), `KalorijskaKorekcija`, `Proizvod` (barkod PK, naziv, kcal_100g, porcija_g, paket_g, izvor).
 Kalorijski cilj = Mifflin-St Jeor + aktivnost + cilj + prihvaćene korekcije, računa se samo u `get_dnevni_cilj`.
 
-## 6. Mobile: ekrani
-Tabovi `(tabs)/`: `index` (početna), `dnevnik`, `chat`, `profil`.
-Ostalo: `ingest`, `pregled`, `zamena`, `podsetnici`, `dodaj-u-plan`, `settings`, `recipes`, `recipe-input|manual|result`, `exercises`, `exercise-input|manual|result`, `meal-plan`, `workout-plan`, `shopping-list`, `weekly-report`, `+native-intent`.
-`_layout.tsx` renderuje `<NotificationHandler />` i obrađuje share intent (`useShareIntent`). Boje: primary `#7CFF3D`, secondary `#1BBE6D`, background `#141414`.
+## 6. Mobile: ekrani (novi dizajn od 2026-11-02)
+Donji meni `(tabs)/`: **Danas** (`index`), **Hrana** (`hrana`: Jelovnik / Recepti / Kupovina), dugme **+** (`plus` je samo mesto za dugme; otvara `/dodaj`), **Trening** (`trening`: Raspored / Moje vežbe), **Ja** (`ja`).
+Paneli i ekrani van tabova: `dodaj` (panel "Šta dodaješ?", transparentModal), `zamena` ("Nešto drugo", modal; param `odmah=slika` odmah otvara kameru), `dodaj-u-plan` (modal), `chat`, `moji-podaci` (forma profila), `settings` ("Veza sa laptopom"), `podsetnici`, `weekly-report`, `ingest`, `pregled`, `skener`, `recipe-manual|result`, `exercise-manual|result`, `+native-intent`.
+Delovi tabova su u `components/hrana/` (Jelovnik, Recepti, Kupovina) i `components/trening/` (Raspored, MojeVezbe). Zajedničke UI komponente: `components/ui.tsx` (Icon, Segment, DayStrip, ListRow, HighlightCard, EmptyState), `CalorieRing.tsx`, `RecipePicker.tsx`.
+Tab se otvara na tačnom delu: `router.navigate({ pathname: "/hrana", params: { deo: "kupovina" } })` (`deo`: jelovnik|recepti|kupovina; za trening raspored|vezbe).
+`_layout.tsx` učitava font Nunito (`@expo-google-fonts/nunito`), renderuje `<NotificationHandler />` i obrađuje share intent. Boje u `theme.ts` (background `#111311`, surface `#1B1E1A`, primary `#7CFF3D`, warning `#FFB547`).
 
 ## 6a. Faza 6 — popravke i bezbednost (2026-11-01)
 - `GET/POST /profile/` vraća `dnevni_cilj_kalorija` (iz `get_dnevni_cilj`, uključuje korekcije), `bmr`, `tdee`; validacija polja (Literal/opsezi).
@@ -96,20 +98,37 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - `requirements.txt`: dopunjen (SQLAlchemy, anthropic, httpx, mediapipe, opencv, torch, numpy) i zaključane verzije iz radnog venv-a.
 - Provereno na KOPIJI baze: bez ključa / pogrešan ključ → 401, dobar → 200; `update_profile` odbija `id`, vrednosti van opsega i nepoznat enum; `swap_meal` odbija loš tip/nepostojeći dan; filter trajanja. Pravi reel posle izmene downloadera **nije testiran**.
 
+## 6f. Popravke plana i liste + prvi testovi (2026-11-02)
+- **Ubacivanje recepta u dan druge nedelje** (`/plan/ubaci`): ako datum nije u nedelji plana, obrok se čuva u `plan_data.izmene[datum][obrok_tip]` i važi samo za taj datum (ranije je menjao isti dan tekuće nedelje). `dan_iz_plana(plan, datum)` u `daily_nutrition.py` primenjuje izmene; koriste ga `day_plan` (pa `/dan`) i `/plan/slotovi`. Kad se napravi novi plan (`/mealplan/generate`), `prenesi_izmene` upiše izmene za njegovu nedelju u dane, kasnije zadrži, prošle odbaci. Dan u nedelji plana se i dalje menja direktno u `dani`.
+- **Lista za kupovinu**: nova kolona `ShoppingListItem.izvor` (`plan` / `recept` / NULL za stare stavke). `/shoppinglist/generate` briše samo stavke sa `izvor="plan"` i ne dodaje namirnice koje su već na listi (nekupljene). Stare stavke (NULL) se ne brišu automatski — obriši ih ručno ako su višak.
+- **Nove kolone bez brisanja baze**: `NOVE_KOLONE` + `_dodaj_kolone` u `database.py` — `init_db` radi `ALTER TABLE ADD COLUMN` za kolone koje fale. Za novu kolonu u postojećoj tabeli: dodaj je u model I u `NOVE_KOLONE`. (Promena tipa/brisanje kolone i dalje nije podržano.)
+- **Testovi**: `backend/tests/` (pytest, privremena SQLite baza, LLM zamenjen lažnim funkcijama): url_guard, plan po datumu/izmene, lista za kupovinu, dodavanje kolone. `pytest` je u `requirements-dev.txt`. Pokretanje: `cd backend; .\venv\Scripts\python -m pytest -q`. 21/21 prolazi.
+- **Ekran "Dodaj u plan"** (`dodaj-u-plan.tsx`): prekidač "Ova nedelja / Sledeća nedelja" (sa opsegom datuma), dani po redu sa datumom ("Danas · Ponedeljak, 2. 11."), ispod svakog dana doručak/ručak/večera; oznaka "najbliže kalorijama" umesto sortiranja. `/plan/slotovi` sada vraća SVE obroke od danas do kraja sledeće nedelje (do 14 dana), po datumu, sa poljima `datum`, `nedelja` (0/1) i `danas`; `/plan/ubaci` prima `dan_offset` 0–13 i vraća `datum`. Helperi `formatDanDatum` / `formatDatumKratko` u `utils/date.ts`; stil prekidača `common.tabRow/tabBtn*` u `styles/common.ts`.
+- Provereno: pytest 23/23, `tsc --noEmit` prolazi, živi `GET /plan/slotovi` vraća 2.–15. 11. po 3 obroka. **Ekran na telefonu nije proveren.**
+
+## 6g. Novi dizajn (2026-11-02)
+- Mockup: https://claude.ai/artifact/Mvp3eR6n7Lb5XhdFMRgZXp (5 ekrana, korisnik odobrio).
+- Struktura: 4 taba po nameri (Danas, Hrana, Trening, Ja) + dugme "+" za sav unos (link, slika obroka, bar-kod, asistent, ručni unos, težina; nudi link iz clipboard-a). Spojeni i obrisani ekrani: stari Home, `dnevnik`, `profil`, `meal-plan`, `recipes`, `shopping-list`, `workout-plan`, `exercises`, `recipe-input`, `exercise-input`; `chat` je prebačen iz tabova u običan ekran.
+- Danas: krug kalorija (`CalorieRing`, bez SVG biblioteke), obroci sa "Pojeo sam" / "Nešto drugo" / "Preskočio sam", tap na označen obrok = poništi, "Još si pojeo", današnji trening, baner za nove recepte iz linkova, `NedeljaIKorekcija`. Ako laptop ne odgovori za 10 s → poruka "Ne mogu da dođem do laptopa" + dugme na Vezu sa laptopom (umesto beskonačnog kruga). Povuci nadole = osveži.
+- Hrana/Jelovnik: traka dana sa datumima, ova/sledeća nedelja (podaci preko `GET /dan/{datum}`, uključuje `izmene`), čekiranje, zamena obroka receptom (`RecipePicker` → `/plan/ubaci`), dugme za kupovinu, nov jelovnik. Kupovina: "Treba kupiti" / "Kupljeno" + "Skloni sve".
+- Trening/Raspored: Teretana / Napolju (čuva se u podešavanjima kalendara, Danas koristi isti izbor), traka dana sa tačkom za dane treninga, čekiranje samo za danas, "Završio sam trening", Google kalendar kao prekidač.
+- Nove zavisnosti (samo JS, bez novog EAS builda): `@expo/vector-icons` (Ionicons), `@expo-google-fonts/nunito`.
+- Provereno: `tsc --noEmit` prolazi; Metro sastavlja Android bundle za sve nove ekrane (font i ikone uključeni). **Na telefonu nije provereno.**
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
-- Ubacivanje recepta (`/plan/ubaci`) u dan sledeće nedelje menja tekući plan; kad se napravi plan za sledeću nedelju, ta izmena se gubi.
-- `/shoppinglist/generate` (iz nedeljnog plana) i dalje briše celu listu, uključujući stavke dodate iz recepta.
+- Stavke liste za kupovinu nastale pre 2026-11-02 nemaju `izvor`, pa ih `/shoppinglist/generate` ne briše.
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
 - `README.md` je zastareo.
+- Stariji sporedni ekrani (ingest, pregled, skener, recipe-result, settings, podsetnici, weekly-report...) dobili su nove boje i font samo tamo gde su imali `fontWeight`; nisu prepravljeni na nove komponente.
 - Nema logoa/ikone aplikacije (podrazumevane Expo ikone).
-- Nema testova, nema migracija baze.
+- Testovi samo za deo backenda (`backend/tests/`); nema mobile testova. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
 
 Bezbednost / operativno:
-- Ključevi su tokom razvoja bili vidljivi u razgovoru (Anthropic ključ, `APP_SECRET_KEY`, ngrok authtoken) → **treba ih rotirati** (nije potvrđeno da je urađeno).
+- Ključevi (Anthropic, `APP_SECRET_KEY`, ngrok) rotirani 2026-11-02 (potvrdio korisnik; aplikacija radi sa novim ključem).
 - Push faza 1–3 je na `origin/main` (github.com/PetarKojadinovic/ReelFuel).
 - CORS je `*` (potrebno za web testiranje; suziti pre hostinga).
 - Pred hosting: HTTP bez TLS-a, deljeni ključ u APK-u, `/docs` dostupan bez ključa, nema rate limita (trošak LLM-a).

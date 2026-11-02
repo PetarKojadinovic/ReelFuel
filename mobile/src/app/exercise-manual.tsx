@@ -24,7 +24,7 @@ export default function ExerciseManualScreen() {
         grupa_misica: grupaMisica.trim(),
         serije_i_ponavljanja: serijePonavljanja.trim(),
       });
-      router.replace("/exercises");
+      router.navigate({ pathname: "/trening", params: { deo: "vezbe" } });
     } catch (err) {
       Alert.alert("Greška", "Nije uspelo čuvanje vežbe");
     } finally {

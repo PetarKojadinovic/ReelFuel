@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { generateShoppingListFromRecipe } from "../services/api";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function RecipeResultScreen() {
@@ -29,7 +29,7 @@ export default function RecipeResultScreen() {
         dodato > 0 ? `Dodato namirnica: ${dodato}` : "Sve namirnice su već na listi.",
         [
           { text: "OK", style: "cancel" },
-          { text: "Otvori listu", onPress: () => router.push("/shopping-list") },
+          { text: "Otvori listu", onPress: () => router.navigate({ pathname: "/hrana", params: { deo: "kupovina" } }) },
         ]
       );
     } catch {
@@ -77,7 +77,7 @@ export default function RecipeResultScreen() {
             style={[common.primaryButton, { marginTop: 16 }]}
             onPress={() => router.push({ pathname: "/dodaj-u-plan", params: { recipe_id: String(recipe.id) } })}
           >
-            <Text style={common.primaryButtonText}>📅 Dodaj u plan</Text>
+            <Text style={common.primaryButtonText}>Dodaj u jelovnik</Text>
           </TouchableOpacity>
           {sastojci.length > 0 && (
             <TouchableOpacity
@@ -86,7 +86,7 @@ export default function RecipeResultScreen() {
               disabled={dodajem}
             >
               <Text style={common.secondaryButtonText}>
-                {dodajem ? "Dodajem..." : "🛒 Dodaj sastojke u listu za kupovinu"}
+                {dodajem ? "Dodajem..." : "Dodaj sastojke u kupovinu"}
               </Text>
             </TouchableOpacity>
           )}
@@ -97,8 +97,8 @@ export default function RecipeResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.primary, marginBottom: 10 },
+  sectionTitle: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 10 },
   item: { fontSize: 15, color: colors.textPrimary, marginBottom: 6, lineHeight: 22 },
   empty: { fontSize: 14, color: colors.textSecondary },
-  calories: { marginTop: 4, fontSize: 16, fontWeight: "700", color: colors.primary },
+  calories: { marginTop: 4, fontSize: 16, fontFamily: fonts.bold, color: colors.primary },
 });

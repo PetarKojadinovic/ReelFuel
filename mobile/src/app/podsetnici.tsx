@@ -94,10 +94,10 @@ export default function PodsetniciScreen() {
 
       <Text style={[typography.sectionLabel, { marginTop: 28 }]}>Provera</Text>
       <TouchableOpacity style={[common.secondaryButton, { marginBottom: 10 }]} onPress={test}>
-        <Text style={common.secondaryButtonText}>🔔 Probna notifikacija (5 sekundi)</Text>
+        <Text style={common.secondaryButtonText}>Probna notifikacija (za 5 sekundi)</Text>
       </TouchableOpacity>
       <TouchableOpacity style={common.secondaryButton} onPress={showScheduled}>
-        <Text style={common.secondaryButtonText}>📋 Šta je zakazano</Text>
+        <Text style={common.secondaryButtonText}>Šta je zakazano</Text>
       </TouchableOpacity>
     </ScrollView>
   );

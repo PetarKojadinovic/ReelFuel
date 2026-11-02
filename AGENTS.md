@@ -11,7 +11,7 @@ Ako postoje `mobile/AGENTS.md` i `mobile/CLAUDE.md`, to su ostaci Expo šablona 
 
 ## 2. Tvrda pravila
 1. **Tajne nikad u git.** `.env` fajlovi se ne commit-uju, samo `.env.example`. Nikad ne ispisuj, ne loguj i ne hardkoduj `ANTHROPIC_API_KEY`, `APP_SECRET_KEY`, ngrok token, IP adrese. Pre svakog commit-a: `git grep --cached -n "sk-ant-"` mora biti prazno.
-2. **Ne briši bazu** (`backend/reelfuel.db`) osim kad dodaješ kolonu u postojeću tabelu (nema migracija) — i tada prvo upozori korisnika da će izgubiti podatke.
+2. **Ne briši bazu** (`backend/reelfuel.db`). Nova kolona u postojećoj tabeli: dodaj je u model i u `NOVE_KOLONE` u `database.py` (`init_db` uradi `ALTER TABLE`). Brisanje baze samo za promenu tipa/brisanje kolone — i tada prvo upozori korisnika da će izgubiti podatke.
 3. **Ne dodaj zavisnosti bez razloga.** Reci šta i zašto; za mobile proveri kompatibilnost sa Expo SDK 57 (`npx expo install` ili tačna verzija, npr. `expo-share-intent@8`).
 4. **Ne tvrdi da nešto radi ako nije testirano.** Razlikuj "napisano" od "potvrđeno na telefonu/webu". Ako ne možeš da pokreneš, reci to.
 5. **Zdravstveni podaci su osetljivi** (težina, kalorije, ciljevi). Ne šalji ih trećim stranama mimo postojećeg LLM poziva, ne loguj ih.
@@ -27,6 +27,7 @@ Ručno — Backend:
 cd backend
 .\venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload --host 0.0.0.0     # Swagger: http://localhost:8000/docs
+python -m pytest -q                               # testovi (pip install -r requirements-dev.txt)
 ```
 Mobile:
 ```powershell
@@ -58,11 +59,11 @@ ReelFuel/
 │  └─ requirements.txt, .env.example
 └─ mobile/                       # Expo SDK 57 + Expo Router
    └─ src/
-      ├─ app/                    # ekrani (file-based routing); (tabs)/ = donja navigacija
-      ├─ components/             # WeightChart, NotificationHandler(.web), NedeljaIKorekcija...
+      ├─ app/                    # ekrani (file-based routing); (tabs)/ = Danas, Hrana, +, Trening, Ja
+      ├─ components/             # ui.tsx (Icon, Segment, DayStrip...), hrana/, trening/, CalorieRing, RecipePicker, WeightChart...
       ├─ services/               # api.ts, apiConfig.ts, notifications.ts, mealTimes.ts
       ├─ styles/common.ts        # zajednički stilovi (common, typography, spacing, radius)
-      ├─ theme.ts                # boje (primary #7CFF3D, secondary #1BBE6D, background #141414)
+      ├─ theme.ts                # boje (primary #7CFF3D, background #111311) + fonts (Nunito)
       └─ utils/date.ts
 ```
 Ostaci Expo šablona su obrisani (2026-11-01). Ne vraćaj `themed-*`, `constants/theme.ts`, `hooks/use-*` — tema je `src/theme.ts` + `src/styles/common.ts`.
@@ -73,13 +74,16 @@ Za Expo API proveri dokumentaciju za SDK 57: https://docs.expo.dev/versions/v57.
 - **Kalorijski cilj ima JEDAN izvor istine**: `get_dnevni_cilj(db)` u `services/daily_nutrition.py` (Mifflin-St Jeor + prihvaćene korekcije). Nemoj računati cilj na drugom mestu.
 - **LLM**: Anthropic SDK, model `claude-haiku-4-5-20251001`. JSON odgovore parsiraj preko `llm_utils.parse_json` (modeli ponekad dodaju ```json ogradu).
 - **Mobile**: svi API pozivi idu kroz `src/services/api.ts` i koriste `await getApiUrl()` + `authHeaders()`. Ne pozivaj `fetch` direktno iz ekrana. Adresa servera (`services/apiConfig.ts`): režim **auto** (podrazumevano) izvodi backend iz Expo adrese (`Constants.expoConfig.hostUri` → isti host, port 8000); režim **ručno** koristi adresu iz Podešavanja servera. `.env` `EXPO_PUBLIC_API_URL` je samo rezerva.
-- **Stil**: koristi `common` / `typography` / `spacing` iz `styles/common.ts` i boje iz `theme.ts`. Ne hardkoduj boje i ne dupliraj stilove po ekranima. UI tekst je na srpskom.
+- **Stil**: koristi `common` / `typography` / `spacing` iz `styles/common.ts`, boje i `fonts` iz `theme.ts`, i komponente iz `components/ui.tsx`. Ne hardkoduj boje i ne dupliraj stilove po ekranima. UI tekst je na srpskom, kratak i jednostavan ("Pojeo sam", "Nešto drugo").
+- **Font**: Nunito. Na Androidu `fontWeight` NE bira debljinu custom fonta → koristi `fontFamily: fonts.bold|extrabold|black`, ne `fontWeight`.
+- **Ikone**: `Icon` iz `components/ui.tsx` (Ionicons), ne emoji u dugmadima.
+- **Navigacija**: nova funkcionalnost ide u postojeći tab ili u panel/modal; ne dodaj nove tabove i ne pravi lance ekrana.
 - **Datumi**: `getTodayDate()` iz `utils/date.ts` (format `YYYY-MM-DD`).
 - **Greške u UI**: `try/catch` + `Alert.alert("Greška", ...)`; null-safe parsiranje odgovora (`x ?? []`).
 
 ## 6. Kako se dodaje...
 **Novi backend endpoint**
-1. servis u `services/` → 2. route u `api/routes/` → 3. `include_router` + import u `main.py` → 4. ako treba nova kolona/tabela: izmena u `models/database.py` (+ upozorenje o brisanju `reelfuel.db`) → 5. funkcija u `mobile/src/services/api.ts` → 6. upiši u `CONTEXT.md`.
+1. servis u `services/` → 2. route u `api/routes/` → 3. `include_router` + import u `main.py` → 4. ako treba nova kolona: model + `NOVE_KOLONE` u `models/database.py` (nova tabela: samo model) → 5. test u `backend/tests/` → 6. funkcija u `mobile/src/services/api.ts` → 7. upiši u `CONTEXT.md`.
 
 **Novi mobile ekran**
 1. fajl u `mobile/src/app/` (ili `(tabs)/`) → 2. ako je van tabova, dodaj `Stack.Screen` u `src/app/_layout.tsx` (naslov) → 3. koristi `common` stilove → 4. ako koristi biblioteku koja ne radi na webu, napravi i `.web.tsx` stub → 5. testiraj na webu i na telefonu.
