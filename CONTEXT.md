@@ -88,6 +88,14 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - **Lista za kupovinu iz recepta**: dugme "🛒 Dodaj sastojke u listu za kupovinu" u `recipe-result.tsx`. `generate-from-recipe` sada **dodaje** u postojeću listu (ranije je brisala sve) i preskače namirnice koje su već na listi (nekupljene).
 - Provereno: `tsc --noEmit` prolazi; backend testiran na KOPIJI baze (TestClient): prošla nedelja vraća stari plan, lista za pregled/odbaci/save, dodavanje u listu bez duplikata. **Na telefonu još nije provereno** (clipboard traži novi build).
 
+## 6e. Bezbednosne popravke (2026-11-02)
+- `core/security.py`: server **odbija da se pokrene** ako `APP_SECRET_KEY` nije podešen ili ima manje od 16 znakova (ranije je tada preskakao proveru). Ključ se poredi sa `hmac.compare_digest`. `APP_SECRET_KEY` dodat u `backend/.env.example`.
+- Chat alati (`chat_service.py`): `update_profile` prima samo dozvoljena polja sa istim opsezima kao `/profile/` (Pydantic `ProfilIzmena`, `extra="forbid"`); `swap_meal` i `add_recipe` proveravaju ulaz umesto da padnu na `KeyError`; najviše 5 krugova alata po poruci.
+- `/chat`, `/mealplan/generate`, `/shoppinglist/generate`, `/workoutplan/generate`: greška 500 više ne vraća tekst izuzetka (loguje se na serveru).
+- `video_downloader.py`: najviše 10 min trajanja, 200 MB po fajlu, samo jedan video (`noplaylist`, nikad ceo profil), bez prenosa uživo. Ingest proverava trajanje iz metapodataka pre preuzimanja i prikazuje jasnu poruku.
+- `requirements.txt`: dopunjen (SQLAlchemy, anthropic, httpx, mediapipe, opencv, torch, numpy) i zaključane verzije iz radnog venv-a.
+- Provereno na KOPIJI baze: bez ključa / pogrešan ključ → 401, dobar → 200; `update_profile` odbija `id`, vrednosti van opsega i nepoznat enum; `swap_meal` odbija loš tip/nepostojeći dan; filter trajanja. Pravi reel posle izmene downloadera **nije testiran**.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
@@ -104,6 +112,7 @@ Bezbednost / operativno:
 - Ključevi su tokom razvoja bili vidljivi u razgovoru (Anthropic ključ, `APP_SECRET_KEY`, ngrok authtoken) → **treba ih rotirati** (nije potvrđeno da je urađeno).
 - Push faza 1–3 je na `origin/main` (github.com/PetarKojadinovic/ReelFuel).
 - CORS je `*` (potrebno za web testiranje; suziti pre hostinga).
+- Pred hosting: HTTP bez TLS-a, deljeni ključ u APK-u, `/docs` dostupan bez ključa, nema rate limita (trošak LLM-a).
 
 ## 8. Roadmap / ideje (po prioritetu)
 1. Rotirati ključeve; README, logo.

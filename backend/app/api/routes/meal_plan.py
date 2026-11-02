@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -6,6 +7,7 @@ from app.models.database import get_db, UserProfile, Recipe, MealPlan
 from app.services.meal_plan_generator import generate_weekly_plan
 from app.services.daily_nutrition import get_dnevni_cilj, week_start
 
+log = logging.getLogger("mealplan")
 router = APIRouter()
 
 
@@ -30,8 +32,9 @@ def generate_plan(db: Session = Depends(get_db)):
 
     try:
         plan_data = generate_weekly_plan(dnevni_cilj, saved_recipes, profile.raspodela_kalorija)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        log.exception("Greska u mealplan")
+        raise HTTPException(status_code=500, detail="Pravljenje plana ishrane nije uspelo. Pokušaj ponovo.")
 
     # Plan je vezan za tekucu nedelju (ponedeljak), da prosle nedelje u dnevniku zadrze svoj plan
     plan_data["nedelja_od"] = week_start(date.today()).isoformat()

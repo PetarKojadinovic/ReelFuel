@@ -5,7 +5,13 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from app.models.database import SessionLocal, IngestJob
-from app.services.video_downloader import fetch_metadata, download_audio, download_video
+from app.services.video_downloader import (
+    PreuzimanjeOdbijeno,
+    download_audio,
+    download_video,
+    fetch_metadata,
+    proveri_trajanje,
+)
 from app.services.transcription import transcribe_audio
 from app.services.recipe_extractor import extract_recipe
 from app.services.exercise_extractor import extract_exercise
@@ -66,6 +72,7 @@ def _run(job_id: str, url: str, tip_hint: str | None):
     try:
         _update(job_id, faza="Čitam opis videa")
         meta = fetch_metadata(url)
+        proveri_trajanje(meta.get("duration"))
         caption = (meta.get("description") or meta.get("title") or "").strip()[:4000]
 
         if tip_hint:
@@ -116,6 +123,9 @@ def _run(job_id: str, url: str, tip_hint: str | None):
 
         _update(job_id, status="gotovo", faza="", rezultat=rezultat)
 
+    except PreuzimanjeOdbijeno as e:
+        log.warning("Preuzimanje odbijeno: %s", e)
+        _update(job_id, status="greska", faza="", greska=str(e))
     except Exception:
         log.exception("Obrada nije uspela za %s", url)
         _update(job_id, status="greska", faza="", greska="Obrada nije uspela. Proveri link ili probaj ponovo.")
