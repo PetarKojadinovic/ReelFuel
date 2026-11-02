@@ -11,9 +11,9 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { sendChatMessage, getChatHistory } from "../../services/api";
-import { colors } from "../../theme";
-import { common } from "../../styles/common";
+import { sendChatMessage, getChatHistory } from "../services/api";
+import { colors, fonts } from "../theme";
+import { common } from "../styles/common";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -91,7 +91,7 @@ export default function ChatScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <Text style={common.emptyText}>Pitaj me bilo šta o svom planu, receptima, ili profilu 👋</Text>
+          <Text style={common.emptyText}>Pitaj me bilo šta o svom planu, receptima, ili profilu</Text>
         }
       />
 
@@ -155,12 +155,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sendButtonText: { color: "#141414", fontSize: 18, fontWeight: "700" },
+  sendButtonText: { color: "#141414", fontSize: 18, fontFamily: fonts.bold },
 });
 
 const markdownStyles = {
-  body: { color: colors.textPrimary, fontSize: 15, lineHeight: 21 },
-  strong: { fontWeight: "700" as const, color: colors.textPrimary },
+  body: { color: colors.textPrimary, fontSize: 15, lineHeight: 21, fontFamily: fonts.regular },
+  strong: { fontFamily: fonts.bold, color: colors.textPrimary },
   em: { fontStyle: "italic" as const },
   bullet_list: { marginVertical: 4 },
   ordered_list: { marginVertical: 4 },

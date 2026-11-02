@@ -1,12 +1,25 @@
 import { useEffect, useRef } from "react";
-import { Alert, AppState } from "react-native";
+import { Alert, AppState, View } from "react-native";
 import { Stack, router, useRootNavigationState } from "expo-router";
 import { useShareIntent } from "expo-share-intent";
-import { colors } from "../theme";
+import { useFonts } from "expo-font";
+import { Nunito_500Medium } from "@expo-google-fonts/nunito/500Medium";
+import { Nunito_600SemiBold } from "@expo-google-fonts/nunito/600SemiBold";
+import { Nunito_700Bold } from "@expo-google-fonts/nunito/700Bold";
+import { Nunito_800ExtraBold } from "@expo-google-fonts/nunito/800ExtraBold";
+import { Nunito_900Black } from "@expo-google-fonts/nunito/900Black";
+import { colors, fonts } from "../theme";
 import NotificationHandler from "../components/NotificationHandler";
 import { noviLinkIzClipboarda, zapamtiLink } from "../services/clipboardLink";
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Nunito_900Black,
+  });
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const navState = useRootNavigationState();
   const shareRef = useRef(hasShareIntent);
@@ -57,6 +70,11 @@ export default function RootLayout() {
     };
   }, [navState?.key]);
 
+  // Dok se font ne učita, prikaži samo pozadinu (traje delić sekunde). Ako font pukne, nastavi sa sistemskim.
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+  }
+
   return (
     <>
       <NotificationHandler />
@@ -64,28 +82,35 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.textPrimary,
+          headerTitleStyle: { fontFamily: fonts.black, fontSize: 18 },
+          headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="recipe-input" options={{ title: "Dodaj Recept" }} />
+        {/* Dugme + u donjem meniju: panel odozdo preko trenutnog ekrana */}
+        <Stack.Screen
+          name="dodaj"
+          options={{
+            headerShown: false,
+            presentation: "transparentModal",
+            animation: "fade",
+            contentStyle: { backgroundColor: "transparent" },
+          }}
+        />
+        <Stack.Screen name="zamena" options={{ title: "Šta si pojeo?", presentation: "modal" }} />
+        <Stack.Screen name="dodaj-u-plan" options={{ title: "Dodaj u jelovnik", presentation: "modal" }} />
+        <Stack.Screen name="chat" options={{ title: "Pitaj asistenta" }} />
+        <Stack.Screen name="moji-podaci" options={{ title: "Moji podaci i cilj" }} />
         <Stack.Screen name="recipe-result" options={{ title: "Recept" }} />
-        <Stack.Screen name="recipe-manual" options={{ title: "Dodaj Recept Ručno" }} />
-        <Stack.Screen name="recipes" options={{ title: "Moji Recepti" }} />
-        <Stack.Screen name="meal-plan" options={{ title: "Nedeljni Plan" }} />
-        <Stack.Screen name="exercise-input" options={{ title: "Dodaj Vežbu" }} />
+        <Stack.Screen name="recipe-manual" options={{ title: "Novi recept" }} />
         <Stack.Screen name="exercise-result" options={{ title: "Vežba" }} />
-        <Stack.Screen name="exercises" options={{ title: "Moje Vežbe" }} />
-        <Stack.Screen name="exercise-manual" options={{ title: "Dodaj Vežbu Ručno" }} />
-        <Stack.Screen name="shopping-list" options={{ title: "Lista za Kupovinu" }} />
-        <Stack.Screen name="weekly-report" options={{ title: "Nedeljni Izveštaj" }} />
-        <Stack.Screen name="settings" options={{ title: "Podešavanja" }} />
-        <Stack.Screen name="workout-plan" options={{ title: "Plan Treninga" }} />
-        <Stack.Screen name="ingest" options={{ title: "Obrada linka" }} />
-        <Stack.Screen name="pregled" options={{ title: "Spremno za pregled" }} />
-        <Stack.Screen name="zamena" options={{ title: "Zamena obroka" }} />
+        <Stack.Screen name="exercise-manual" options={{ title: "Nova vežba" }} />
+        <Stack.Screen name="weekly-report" options={{ title: "Nedeljni izveštaj" }} />
+        <Stack.Screen name="settings" options={{ title: "Veza sa laptopom" }} />
+        <Stack.Screen name="ingest" options={{ title: "Čitam link" }} />
+        <Stack.Screen name="pregled" options={{ title: "Novo iz linkova" }} />
         <Stack.Screen name="podsetnici" options={{ title: "Podsetnici" }} />
-        <Stack.Screen name="dodaj-u-plan" options={{ title: "Dodaj u plan" }} />
         <Stack.Screen name="skener" options={{ title: "Skeniraj pakovanje" }} />
       </Stack>
     </>

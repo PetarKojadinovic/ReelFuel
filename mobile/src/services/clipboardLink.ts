@@ -47,6 +47,18 @@ export async function noviLinkIzClipboarda(): Promise<string | null> {
   }
 }
 
+/** Podržan link iz clipboard-a (i ako je već ponuđen) — za panel "Šta dodaješ?". */
+export async function podrzanLinkIzClipboarda(): Promise<string | null> {
+  if (!dostupno()) return null;
+  try {
+    const Clipboard = require("expo-clipboard");
+    if (!(await Clipboard.hasStringAsync())) return null;
+    return izvuciPodrzanLink((await Clipboard.getStringAsync()) || "");
+  } catch {
+    return null;
+  }
+}
+
 /** Zapamti link kao ponuđen (bez obzira da li ga je korisnik prihvatio). */
 export async function zapamtiLink(link: string) {
   try {

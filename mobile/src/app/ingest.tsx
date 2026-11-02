@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { startIngest, getIngestJob, saveIngestJob, odbaciIngestJob } from "../services/api";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 const TIMEOUT_MS = 10 * 60 * 1000;
@@ -79,7 +79,7 @@ export default function IngestScreen() {
       if (r.tip === "recept") {
         router.replace({ pathname: "/dodaj-u-plan", params: { recipe_id: String(r.id) } });
       } else {
-        router.replace("/exercises");
+        router.navigate({ pathname: "/trening", params: { deo: "vezbe" } });
       }
     } catch {
       Alert.alert("Greška", "Nije uspelo čuvanje.");
@@ -112,10 +112,10 @@ export default function IngestScreen() {
           style={[common.primaryButton, { width: "100%", marginBottom: 12 }]}
           onPress={() => run("recept")}
         >
-          <Text style={common.primaryButtonText}>🍳 Recept</Text>
+          <Text style={common.primaryButtonText}>Recept</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[common.secondaryButton, { width: "100%" }]} onPress={() => run("vezba")}>
-          <Text style={common.secondaryButtonText}>💪 Vežba</Text>
+          <Text style={common.secondaryButtonText}>Vežba</Text>
         </TouchableOpacity>
       </View>
     );
@@ -175,7 +175,7 @@ export default function IngestScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { fontSize: 16, fontWeight: "700", color: colors.primary, marginBottom: 10 },
+  section: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 10 },
   item: { fontSize: 15, color: colors.textPrimary, marginBottom: 6, lineHeight: 22 },
-  calories: { fontSize: 16, fontWeight: "700", color: colors.primary, marginBottom: 12 },
+  calories: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 12 },
 });

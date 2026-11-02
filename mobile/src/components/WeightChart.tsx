@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 
 type Entry = { datum: string; tezina_kg: number };
 
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     borderColor: colors.secondary,
   },
   barWrap: { flex: 1, alignItems: "center" },
-  barValue: { fontSize: 10, color: colors.textPrimary, fontWeight: "700", marginBottom: 4 },
+  barValue: { fontSize: 10, color: colors.textPrimary, fontFamily: fonts.bold, marginBottom: 4 },
   barColumn: { height: 140, justifyContent: "flex-end" },
   bar: {
     width: "70%",

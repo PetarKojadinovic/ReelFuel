@@ -24,9 +24,9 @@ export default function SettingsScreen() {
     setTest("Proveravam...");
     try {
       await getProfile();
-      setTest(`✅ Povezano: ${await getApiUrl()}`);
+      setTest(`Povezano: ${await getApiUrl()}`);
     } catch {
-      setTest(`❌ Nema veze sa ${await getApiUrl()}. Da li je backend pokrenut (start.ps1)?`);
+      setTest(`Nema veze sa ${await getApiUrl()}. Da li je backend pokrenut (start.ps1)?`);
     }
   };
 
@@ -56,7 +56,7 @@ export default function SettingsScreen() {
       <Text style={typography.label}>Adresa backend servera</Text>
 
       <TouchableOpacity style={[styles.opcija, mode === "auto" && styles.opcijaActive]} onPress={izaberiAuto}>
-        <Text style={typography.body}>🔄 Automatski (preporučeno)</Text>
+        <Text style={typography.body}>Automatski (preporučeno)</Text>
         <Text style={[typography.bodySecondary, { marginTop: 4 }]}>
           {autoUrl
             ? `Backend na istom računaru kao Expo: ${autoUrl}. Radi i kad promeniš mrežu ili hotspot.`
@@ -65,7 +65,7 @@ export default function SettingsScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.opcija, mode === "rucno" && styles.opcijaActive]} onPress={() => setMode("rucno")}>
-        <Text style={typography.body}>✏️ Ručno</Text>
+        <Text style={typography.body}>Ručno</Text>
         <Text style={[typography.bodySecondary, { marginTop: 4 }]}>Za backend na drugom računaru ili serveru.</Text>
       </TouchableOpacity>
 

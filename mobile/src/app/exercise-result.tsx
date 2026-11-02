@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 export default function ExerciseResultScreen() {
@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
   statsRow: { flexDirection: "row", gap: 12 },
   statCard: { flex: 1, marginBottom: 0 },
-  statValue: { fontSize: 20, fontWeight: "800", color: colors.textPrimary, marginTop: 4 },
+  statValue: { fontSize: 20, fontFamily: fonts.extrabold, color: colors.textPrimary, marginTop: 4 },
 });

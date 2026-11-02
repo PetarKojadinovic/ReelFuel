@@ -36,7 +36,7 @@ export default function RecipeManualScreen() {
         koraci,
         priblizne_kalorije: kalorije.trim() || undefined,
       });
-      router.replace("/recipes");
+      router.navigate({ pathname: "/hrana", params: { deo: "recepti" } });
     } catch (err) {
       Alert.alert("Greška", "Nije uspelo čuvanje recepta");
     } finally {

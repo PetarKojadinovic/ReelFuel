@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, StyleSheet } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { getIngestPregled, saveIngestJob, odbaciIngestJob, PregledStavka } from "../services/api";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography, spacing } from "../styles/common";
 
 const OSVEZI_MS = 4000;
@@ -177,7 +177,7 @@ export default function PregledScreen() {
 const styles = StyleSheet.create({
   card: { flexDirection: "row", alignItems: "center", gap: 12 },
   ikona: { fontSize: 24 },
-  naziv: { fontSize: 15, fontWeight: "700", color: colors.textPrimary, marginBottom: 2 },
+  naziv: { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 2 },
   dugmad: { flexDirection: "row", gap: 8 },
   ok: {
     width: 40,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  okText: { fontSize: 18, fontWeight: "800", color: colors.background },
+  okText: { fontSize: 18, fontFamily: fonts.extrabold, color: colors.background },
   ne: {
     width: 40,
     height: 40,
@@ -196,5 +196,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  neText: { fontSize: 16, fontWeight: "800", color: colors.danger },
+  neText: { fontSize: 16, fontFamily: fonts.extrabold, color: colors.danger },
 });

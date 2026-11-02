@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "rea
 import { useFocusEffect } from "expo-router";
 import { osveziNedelju, getNedeljaStatus, getKorekcija, odgovoriKorekcija, resetKorekcija } from "../services/api";
 import { getAutoPlanOn } from "../services/mealTimes";
-import { colors } from "../theme";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -121,10 +121,10 @@ export default function NedeljaIKorekcija({ onChanged }: { onChanged?: () => voi
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center" },
-  title: { fontSize: 12, color: colors.secondary, fontWeight: "700", textTransform: "uppercase" },
+  title: { fontSize: 12, color: colors.secondary, fontFamily: fonts.bold, textTransform: "uppercase" },
   btnRow: { flexDirection: "row", gap: 8 },
   btn: { flex: 1, paddingVertical: 10, borderRadius: 12 },
-  btnText: { color: "#141414", fontSize: 13, fontWeight: "700", textAlign: "center" },
-  btnTextLight: { color: colors.textPrimary, fontSize: 13, fontWeight: "700", textAlign: "center" },
+  btnText: { color: "#141414", fontSize: 13, fontFamily: fonts.bold, textAlign: "center" },
+  btnTextLight: { color: colors.textPrimary, fontSize: 13, fontFamily: fonts.bold, textAlign: "center" },
   noteRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
 });
