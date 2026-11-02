@@ -1,9 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.models.database import get_db, ChatMessage
 from app.services.chat_service import send_message
 
+log = logging.getLogger("chat")
 router = APIRouter()
 
 
@@ -16,8 +18,9 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     try:
         reply = send_message(request.message, db)
         return {"reply": reply}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        log.exception("Greska u chat")
+        raise HTTPException(status_code=500, detail="Asistent trenutno ne može da odgovori. Pokušaj ponovo.")
 
 
 @router.get("/history")

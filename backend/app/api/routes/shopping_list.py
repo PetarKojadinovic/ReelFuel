@@ -1,9 +1,11 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.models.database import get_db, MealPlan, ShoppingListItem, Recipe
 from app.services.shopping_list_generator import generate_shopping_list
 
+log = logging.getLogger("shoppinglist")
 router = APIRouter()
 
 
@@ -27,8 +29,9 @@ def generate(db: Session = Depends(get_db)):
 
     try:
         stavke = generate_shopping_list(plan.plan_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        log.exception("Greska u shoppinglist")
+        raise HTTPException(status_code=500, detail="Pravljenje liste za kupovinu nije uspelo. Pokušaj ponovo.")
 
     db.query(ShoppingListItem).delete()
     db.commit()

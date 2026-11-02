@@ -1,8 +1,10 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models.database import get_db, UserProfile, Exercise, WorkoutPlan
 from app.services.workout_plan_generator import generate_weekly_workout_plan
 
+log = logging.getLogger("workoutplan")
 router = APIRouter()
 
 
@@ -27,8 +29,9 @@ def generate_plan(db: Session = Depends(get_db)):
         plan_data = generate_weekly_workout_plan(
             profile.broj_treninga_nedeljno, profile.cilj, saved_exercises
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        log.exception("Greska u workoutplan")
+        raise HTTPException(status_code=500, detail="Pravljenje plana treninga nije uspelo. Pokušaj ponovo.")
 
     db_plan = WorkoutPlan(plan_data=plan_data)
     db.add(db_plan)

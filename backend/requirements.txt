@@ -1,7 +1,16 @@
-fastapi
-uvicorn[standard]
-yt-dlp
-openai-whisper
-python-multipart
-pydantic
-python-dotenv
+# Verzije zakljucane prema venv-u koji radi (2026-11-02).
+# Sistemski je potreban i FFmpeg (ffmpeg + ffprobe u PATH-u).
+fastapi==0.139.0
+uvicorn[standard]==0.51.0
+pydantic==2.13.4
+python-multipart==0.0.32
+python-dotenv==1.2.2
+SQLAlchemy==2.0.51
+httpx==0.28.1
+anthropic==0.117.0
+yt-dlp==2026.7.4
+openai-whisper==20250625
+torch==2.13.0
+numpy==2.4.6
+mediapipe==1.0.0
+opencv-python==5.0.0.93

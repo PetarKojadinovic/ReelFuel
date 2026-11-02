@@ -1,11 +1,33 @@
 import os
 import json
+import logging
+from typing import Literal, Optional
+
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 from app.models.database import UserProfile, MealPlan, Recipe, ChatMessage
 
 load_dotenv()
+log = logging.getLogger("chat")
+
+# Najvise krugova alata po jednoj poruci (zastita od beskonacne petlje i troska)
+MAX_TOOL_ROUNDS = 5
+OBROK_TIPOVI = ("dorucak", "rucak", "vecera")
+
+
+class ProfilIzmena(BaseModel):
+    """Ista ogranicenja kao ProfileRequest u routes/profile.py. Nepoznata polja se odbijaju."""
+    model_config = ConfigDict(extra="forbid")
+
+    tezina_kg: Optional[float] = Field(default=None, gt=20, lt=400)
+    visina_cm: Optional[float] = Field(default=None, gt=80, lt=260)
+    godine: Optional[int] = Field(default=None, gt=9, lt=120)
+    pol: Optional[Literal["muski", "zenski"]] = None
+    nivo_aktivnosti: Optional[Literal["nizak", "srednji", "visok"]] = None
+    cilj: Optional[Literal["mrsavljenje", "dobijanje_mise", "odrzavanje"]] = None
+    raspodela_kalorija: Optional[Literal["vecera_najveca", "rucak_najveci", "dorucak_najveci", "ravnomerno"]] = None
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -73,33 +95,56 @@ def execute_tool(tool_name: str, tool_input: dict, db: Session) -> str:
         profile = db.query(UserProfile).first()
         if not profile:
             return "Ne postoji profil da se azurira."
-        for key, value in tool_input.items():
+        try:
+            izmena = ProfilIzmena(**tool_input).model_dump(exclude_none=True)
+        except ValidationError:
+            return "Izmena odbijena: neispravna ili nedozvoljena polja profila."
+        if not izmena:
+            return "Nema polja za izmenu."
+        for key, value in izmena.items():
             setattr(profile, key, value)
         db.commit()
-        return f"Profil azuriran: {json.dumps(tool_input, ensure_ascii=False)}"
+        return f"Profil azuriran: {json.dumps(izmena, ensure_ascii=False)}"
 
     if tool_name == "swap_meal":
+        dan = str(tool_input.get("dan") or "").strip().lower()
+        obrok_tip = tool_input.get("obrok_tip")
+        novi_naziv = str(tool_input.get("novi_naziv") or "").strip()[:200]
+        try:
+            nove_kalorije = int(tool_input.get("nove_kalorije"))
+        except (TypeError, ValueError):
+            return "Izmena odbijena: kalorije moraju biti broj."
+        if not dan or obrok_tip not in OBROK_TIPOVI or not novi_naziv or not 0 <= nove_kalorije <= 5000:
+            return "Izmena odbijena: neispravan dan, tip obroka, naziv ili kalorije."
+
         plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
         if not plan:
             return "Ne postoji nedeljni plan da se izmeni."
-        plan_data = plan.plan_data
+        plan_data = dict(plan.plan_data or {})
+        nadjen = False
         for day in plan_data.get("dani", []):
-            if day["dan"].lower() == tool_input["dan"].lower():
-                day["obroci"][tool_input["obrok_tip"]] = {
-                    "naziv": tool_input["novi_naziv"],
-                    "kalorije": tool_input["nove_kalorije"],
+            if str(day.get("dan", "")).lower() == dan:
+                obroci = day.setdefault("obroci", {})
+                obroci[obrok_tip] = {
+                    "naziv": novi_naziv,
+                    "kalorije": nove_kalorije,
                     "izvor": "rucna_izmena",
                     "recipe_id": None,
                 }
-                ukupno = sum(m["kalorije"] for m in day["obroci"].values())
-                day["ukupno_kalorija"] = ukupno
+                day["ukupno_kalorija"] = sum(int(m.get("kalorije") or 0) for m in obroci.values())
+                nadjen = True
+        if not nadjen:
+            return f"Dan '{tool_input.get('dan')}' nije pronadjen u planu."
         plan.plan_data = plan_data
         db.commit()
-        return f"Obrok izmenjen za {tool_input['dan']} - {tool_input['obrok_tip']}."
+        return f"Obrok izmenjen za {tool_input['dan']} - {obrok_tip}."
 
     if tool_name == "add_recipe":
+        naziv = str(tool_input.get("naziv_jela") or "").strip()[:200]
+        if not naziv or not isinstance(tool_input.get("sastojci"), list) or not isinstance(tool_input.get("koraci"), list):
+            return "Recept odbijen: nedostaje naziv, sastojci ili koraci."
         db_recipe = Recipe(
-            naziv_jela=tool_input["naziv_jela"],
+            naziv_jela=naziv,
             sastojci=tool_input["sastojci"],
             koraci=tool_input["koraci"],
             priblizne_kalorije=tool_input.get("priblizne_kalorije"),
@@ -154,7 +199,9 @@ Budi kratak, direktan i koristan.
         messages=messages,
     )
 
-    while response.stop_reason == "tool_use":
+    rounds = 0
+    while response.stop_reason == "tool_use" and rounds < MAX_TOOL_ROUNDS:
+        rounds += 1
         tool_results = []
         assistant_content = response.content
 
