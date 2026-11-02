@@ -15,12 +15,18 @@ from app.services.daily_nutrition import (
     MARKER_IZVORI,
     OBROCI,
     _norm,
+    dan_iz_plana,
     day_summary,
+    plan_week_start,
     plan_za_datum,
     to_kcal,
+    week_start,
 )
 
 router = APIRouter()
+
+# Od danas do kraja sledece nedelje je najvise 14 dana (kad je danas ponedeljak)
+MAX_DANA = 14
 
 
 def parse_kcal(s: Optional[str]) -> Optional[int]:
@@ -44,8 +50,10 @@ def slotovi(
     dorucak: Optional[str] = None,
     rucak: Optional[str] = None,
     vecera: Optional[str] = None,
+    dana: int = MAX_DANA,
     db: Session = Depends(get_db),
 ):
+    """Obroci u koje recept moze da se ubaci: od danas do kraja SLEDECE nedelje, po datumu i obroku."""
     plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
     if not plan:
         raise HTTPException(status_code=400, detail="Nema nedeljnog plana ishrane. Prvo ga generiši.")
@@ -65,11 +73,14 @@ def slotovi(
 
     rk = parse_kcal(recipe.priblizne_kalorije)
     out = []
-    for i in range(7):
+    ova_nedelja = week_start(today)
+    for i in range(max(1, min(dana, MAX_DANA))):
         d = today + timedelta(days=i)
-        ime = DANI[d.weekday()]
+        nedelja = (week_start(d) - ova_nedelja).days // 7
+        if nedelja > 1:
+            break
         day_src = plan_za_datum(db, d.isoformat()) or plan
-        day = _find_day(day_src.plan_data, ime)
+        day = dan_iz_plana(day_src, d.isoformat())
         if not day:
             continue
         for tip in OBROCI:
@@ -84,6 +95,7 @@ def slotovi(
                     "dan_offset": i,
                     "dan": day.get("dan"),
                     "datum": d.isoformat(),
+                    "nedelja": nedelja,  # 0 = ova, 1 = sledeca
                     "obrok_tip": tip,
                     "trenutni_naziv": meal.get("naziv"),
                     "trenutne_kalorije": kc,
@@ -92,16 +104,11 @@ def slotovi(
                 }
             )
 
-    out.sort(
-        key=lambda s: (
-            s["izvor"] == "sacuvan",
-            abs(s["razlika"]) if s["razlika"] is not None else 10_000,
-            s["dan_offset"],
-        )
-    )
+    # Redosled: po datumu, pa dorucak/rucak/vecera (kako se pojavljuju u petlji)
     return {
         "recept": {"id": recipe.id, "naziv": recipe.naziv_jela, "kalorije": rk},
-        "slotovi": out[:6],
+        "danas": today.isoformat(),
+        "slotovi": out,
     }
 
 
@@ -113,8 +120,8 @@ class UbaciRequest(BaseModel):
 
 @router.post("/ubaci")
 def ubaci(req: UbaciRequest, db: Session = Depends(get_db)):
-    if not 0 <= req.dan_offset <= 6:
-        raise HTTPException(status_code=400, detail="Dan mora biti u narednih 7 dana")
+    if not 0 <= req.dan_offset < MAX_DANA:
+        raise HTTPException(status_code=400, detail="Dan mora biti u ovoj ili sledećoj nedelji")
     d = date.today() + timedelta(days=req.dan_offset)
     plan = plan_za_datum(db, d.isoformat())
     recipe = db.get(Recipe, req.recipe_id)
@@ -134,27 +141,37 @@ def ubaci(req: UbaciRequest, db: Session = Depends(get_db)):
         if marker:
             raise HTTPException(status_code=400, detail="Taj obrok je već upisan u dnevnik")
 
-    data = copy.deepcopy(plan.plan_data)
-    day = _find_day(data, DANI[d.weekday()])
+    datum = d.isoformat()
+    day = dan_iz_plana(plan, datum)
     meal = ((day or {}).get("obroci") or {}).get(req.obrok_tip)
     if not day or not meal:
         raise HTTPException(status_code=400, detail="Taj obrok ne postoji u planu")
 
     rk = parse_kcal(recipe.priblizne_kalorije)
     kcal = rk if rk is not None else to_kcal(meal.get("kalorije"))
-    day["obroci"][req.obrok_tip] = {
+    novi_obrok = {
         "naziv": recipe.naziv_jela,
         "kalorije": kcal,
         "izvor": "sacuvan",
         "recipe_id": recipe.id,
         "sastojci": recipe.sastojci or [],
     }
-    day["ukupno_kalorija"] = sum(to_kcal(m.get("kalorije")) for m in day["obroci"].values())
+
+    data = copy.deepcopy(plan.plan_data)
+    if plan_week_start(plan) == week_start(d):
+        # Dan je u nedelji ovog plana: menja se sam plan (vidi se i u nedeljnom pregledu)
+        plan_day = _find_day(data, DANI[d.weekday()])
+        plan_day["obroci"][req.obrok_tip] = novi_obrok
+        plan_day["ukupno_kalorija"] = sum(to_kcal(m.get("kalorije")) for m in plan_day["obroci"].values())
+    else:
+        # Dan je u nekoj drugoj nedelji: izmena vazi samo za taj datum i prenosi se u novi plan
+        data.setdefault("izmene", {}).setdefault(datum, {})[req.obrok_tip] = novi_obrok
     plan.plan_data = data
     db.commit()
 
     return {
         "ok": True,
+        "datum": datum,
         "dan": day.get("dan"),
         "obrok_tip": req.obrok_tip,
         "kalorije": kcal,

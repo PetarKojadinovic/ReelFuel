@@ -1,7 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, JSON, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
+
 from sqlalchemy import create_engine, Column, Integer, String, Float, JSON, DateTime, Boolean
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = "sqlite:///./reelfuel.db"
 
@@ -72,8 +72,29 @@ def get_db():
         db.close()
 
 
-def init_db():
-    Base.metadata.create_all(bind=engine)
+# Nove kolone u POSTOJECIM tabelama. SQLite nema migracije, a create_all ne dodaje
+# kolone u tabelu koja vec postoji -> dodaju se ovde (ALTER TABLE), bez brisanja baze.
+# Imena su fiksna u kodu (ne dolaze od korisnika).
+NOVE_KOLONE = {
+    "shopping_list": {"izvor": "VARCHAR"},
+}
+
+
+def _dodaj_kolone(bind):
+    with bind.begin() as conn:
+        for tabela, kolone in NOVE_KOLONE.items():
+            postojece = {r[1] for r in conn.exec_driver_sql(f"PRAGMA table_info({tabela})")}
+            if not postojece:
+                continue  # tabela jos ne postoji; create_all ju je napravio sa svim kolonama
+            for kolona, tip in kolone.items():
+                if kolona not in postojece:
+                    conn.exec_driver_sql(f"ALTER TABLE {tabela} ADD COLUMN {kolona} {tip}")
+
+
+def init_db(bind=None):
+    bind = bind or engine
+    Base.metadata.create_all(bind=bind)
+    _dodaj_kolone(bind)
 
 
 class Exercise(Base):
@@ -122,6 +143,7 @@ class ShoppingListItem(Base):
     naziv = Column(String)
     kolicina = Column(String, nullable=True)
     checked = Column(Boolean, default=False)
+    izvor = Column(String, nullable=True)  # "plan" (iz nedeljnog plana) / "recept" / None (stare stavke)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

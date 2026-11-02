@@ -1,3 +1,4 @@
+import copy
 from datetime import date, timedelta
 from typing import Optional
 
@@ -72,15 +73,62 @@ def plan_za_datum(db, datum: str):
     return None
 
 
-def day_plan(db, datum: str):
-    plan = plan_za_datum(db, datum)
+def dan_iz_plana(plan, datum: str) -> Optional[dict]:
+    """Dan iz plana za tacan datum.
+
+    Obroci ubaceni za dan VAN nedelje plana (npr. sledeca nedelja) cuvaju se u
+    plan_data["izmene"][datum][obrok_tip] i ovde se primenjuju samo na taj datum,
+    da ne bi promenili isti dan u tekucoj nedelji.
+    """
     if not plan:
         return None
+    data = plan.plan_data or {}
     target = DANI[date.fromisoformat(datum).weekday()]
-    for d in (plan.plan_data or {}).get("dani", []):
-        if _norm(d.get("dan")) == target:
-            return d
-    return None
+    base = next((d for d in data.get("dani", []) if _norm(d.get("dan")) == target), None)
+    izmene = (data.get("izmene") or {}).get(datum)
+    if not izmene or base is None:
+        return base
+    day = copy.deepcopy(base)
+    obroci = day.setdefault("obroci", {})
+    obroci.update(copy.deepcopy(izmene))
+    day["ukupno_kalorija"] = sum(to_kcal(m.get("kalorije")) for m in obroci.values())
+    return day
+
+
+def prenesi_izmene(stari_plan_data: Optional[dict], novi_plan_data: dict) -> dict:
+    """Pri pravljenju novog plana zadrzi obroke koje je korisnik ubacio za buduce datume.
+
+    Izmene za dane u nedelji novog plana upisuju se direktno u njegove dane,
+    kasnije ostaju u "izmene"; prosli datumi se odbacuju.
+    """
+    izmene = (stari_plan_data or {}).get("izmene") or {}
+    od = novi_plan_data.get("nedelja_od")
+    if not izmene or not od:
+        return novi_plan_data
+    ws = date.fromisoformat(od)
+    ostaje = {}
+    for datum, obroci in izmene.items():
+        try:
+            d = date.fromisoformat(datum)
+        except ValueError:
+            continue
+        if d < ws:
+            continue
+        if d < ws + timedelta(days=7):
+            target = DANI[d.weekday()]
+            for day in novi_plan_data.get("dani", []):
+                if _norm(day.get("dan")) == target:
+                    day.setdefault("obroci", {}).update(copy.deepcopy(obroci))
+                    day["ukupno_kalorija"] = sum(to_kcal(m.get("kalorije")) for m in day["obroci"].values())
+        else:
+            ostaje[datum] = obroci
+    if ostaje:
+        novi_plan_data["izmene"] = ostaje
+    return novi_plan_data
+
+
+def day_plan(db, datum: str):
+    return dan_iz_plana(plan_za_datum(db, datum), datum)
 
 
 def planned_meal(db, datum: str, tip: str):
