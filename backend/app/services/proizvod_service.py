@@ -35,12 +35,22 @@ def _num(v) -> Optional[float]:
         return None
 
 
+def _proteini(v) -> Optional[float]:
+    """Proteini na 100 g; 0 je validna vrednost (npr. Coca-Cola), preko 100 je greska."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if 0 <= f <= 100 else None
+
+
 def to_dict(p: Proizvod) -> dict:
     return {
         "pronadjen": True,
         "barkod": p.barkod,
         "naziv": p.naziv,
         "kcal_100g": round(p.kcal_100g) if p.kcal_100g is not None else None,
+        "proteini_100g": round(p.proteini_100g, 1) if p.proteini_100g is not None else None,
         "porcija_g": p.porcija_g,
         "paket_g": p.paket_g,
         "izvor": p.izvor,
@@ -86,6 +96,7 @@ def _iz_open_food_facts(barkod: str) -> Optional[dict]:
     return {
         "naziv": naziv[:120],
         "kcal_100g": kcal,
+        "proteini_100g": _proteini(n.get("proteins_100g")),
         "porcija_g": _num(p.get("serving_quantity")),
         "paket_g": _num(p.get("product_quantity")),
     }
@@ -110,11 +121,12 @@ ETIKETA_PROMPT = """Na slici je pakovanje hrane ili tabela nutritivnih vrednosti
 Pročitaj vrednosti SA SLIKE, ne izmišljaj.
 - "kcal_100g": energija u kcal na 100 g (ili 100 ml). Ako piše samo kJ, podeli sa 4.184.
   Ako je data samo vrednost po porciji i poznata je masa porcije, preračunaj na 100 g.
+- "proteini_100g": proteini u gramima na 100 g ako piše, inače null.
 - "porcija_g": masa jedne porcije u gramima ako piše, inače null.
 - "paket_g": neto masa pakovanja u gramima ako piše, inače null.
 - "naziv": kratak naziv proizvoda ako se vidi, inače null.
 Ako na slici ne možeš da pročitaš energiju, vrati "kcal_100g": null.
-Vrati ISKLJUČIVO JSON: {"naziv": string|null, "kcal_100g": broj|null, "porcija_g": broj|null, "paket_g": broj|null}"""
+Vrati ISKLJUČIVO JSON: {"naziv": string|null, "kcal_100g": broj|null, "proteini_100g": broj|null, "porcija_g": broj|null, "paket_g": broj|null}"""
 
 
 def procitaj_etiketu(db, barkod: str, b64: str, media_type: str, naziv: Optional[str] = None) -> dict:
@@ -140,6 +152,7 @@ def procitaj_etiketu(db, barkod: str, b64: str, media_type: str, naziv: Optional
     p = db.get(Proizvod, barkod) or Proizvod(barkod=barkod)
     p.naziv = ((naziv or "").strip() or data.get("naziv") or "Proizvod")[:120]
     p.kcal_100g = kcal
+    p.proteini_100g = _proteini(data.get("proteini_100g"))
     p.porcija_g = _num(data.get("porcija_g"))
     p.paket_g = _num(data.get("paket_g"))
     p.izvor = "etiketa"

@@ -137,6 +137,7 @@ export default function IngestScreen() {
               ))}
             </View>
             {r.priblizne_kalorije && <Text style={styles.calories}>Kalorije: {r.priblizne_kalorije}</Text>}
+            {r.proteini_g != null && <Text style={styles.calories}>Proteini: oko {Math.round(r.proteini_g)} g</Text>}
           </>
         ) : (
           <>

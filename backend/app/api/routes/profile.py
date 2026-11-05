@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db, UserProfile, WeightLog
-from app.services.daily_nutrition import ACTIVITY_MULTIPLIERS, get_dnevni_cilj
+from app.services.daily_nutrition import ACTIVITY_MULTIPLIERS, get_dnevni_cilj, get_dnevni_cilj_proteina
 
 router = APIRouter()
 
@@ -68,6 +68,7 @@ def save_profile(request: ProfileRequest, db: Session = Depends(get_db)):
         "bmr": round(bmr),
         "tdee": round(tdee),
         "dnevni_cilj_kalorija": get_dnevni_cilj(db),
+        "dnevni_cilj_proteina": get_dnevni_cilj_proteina(db),
     }
 
 
@@ -91,4 +92,5 @@ def get_profile(db: Session = Depends(get_db)):
         "bmr": round(bmr),
         "tdee": round(tdee),
         "dnevni_cilj_kalorija": get_dnevni_cilj(db),
+        "dnevni_cilj_proteina": get_dnevni_cilj_proteina(db),
     }

@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.services.video_downloader import download_video, get_caption, extract_frames
 from app.services.transcription import transcribe_audio
 from app.services.recipe_extractor import extract_recipe
 from app.models.database import get_db, Recipe
 from app.core.url_guard import require_allowed_url
+from app.services.daily_nutrition import to_g
 import logging
 import os
 import shutil
@@ -32,17 +33,15 @@ def process_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
         caption = get_caption(request.url)
         frame_paths = extract_frames(video_path)
 
-        recipe_data = extract_recipe(
-            transcript=transcript,
-            caption=caption,
-            frame_paths=frame_paths,
-        )
+        # extract_recipe ne prima frejmove (ranije je ovde pucalo sa TypeError)
+        recipe_data = extract_recipe(transcript=transcript, caption=caption)
 
         db_recipe = Recipe(
             naziv_jela=recipe_data.get("naziv_jela"),
             sastojci=recipe_data.get("sastojci"),
             koraci=recipe_data.get("koraci"),
             priblizne_kalorije=recipe_data.get("priblizne_kalorije"),
+            proteini_g=to_g(recipe_data.get("proteini_g")),
             source_url=request.url,
         )
         db.add(db_recipe)
@@ -77,6 +76,7 @@ def list_recipes(db: Session = Depends(get_db)):
                 "sastojci": r.sastojci,
                 "koraci": r.koraci,
                 "priblizne_kalorije": r.priblizne_kalorije,
+                "proteini_g": r.proteini_g,
             }
             for r in recipes
         ]
@@ -98,6 +98,7 @@ class ManualRecipeRequest(BaseModel):
     sastojci: list
     koraci: list
     priblizne_kalorije: str | None = None
+    proteini_g: float | None = Field(default=None, ge=0, le=500)
 
 
 @router.post("/manual")
@@ -107,6 +108,7 @@ def add_manual_recipe(request: ManualRecipeRequest, db: Session = Depends(get_db
         sastojci=request.sastojci,
         koraci=request.koraci,
         priblizne_kalorije=request.priblizne_kalorije,
+        proteini_g=request.proteini_g,
         source_url="rucno_dodato",
     )
     db.add(db_recipe)

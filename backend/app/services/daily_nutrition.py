@@ -12,6 +12,8 @@ GRACE_MIN = 120  # posle ovoga se obrok bez odgovora racuna kao procena
 MARKER_IZVORI = ("plan", "zamena", "preskoceno")
 STATUS_PO_IZVORU = {"plan": "pojeo", "zamena": "zamenjeno", "preskoceno": "preskoceno"}
 ACTIVITY_MULTIPLIERS = {"nizak": 1.2, "srednji": 1.55, "visok": 1.725}
+# Grami proteina po kg telesne mase (preporuke za aktivne osobe su ~1.6-2.2 g/kg)
+PROTEINI_PO_KG = {"mrsavljenje": 2.0, "dobijanje_mise": 1.8, "odrzavanje": 1.6}
 
 
 def _norm(s) -> str:
@@ -31,6 +33,25 @@ def to_kcal(v) -> int:
         return int(round(float(v)))
     except (TypeError, ValueError):
         return 0
+
+
+def to_g(v) -> Optional[float]:
+    """Grami (proteina) iz LLM/klijent vrednosti; None ako je nepoznato ili besmisleno."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return round(f, 1) if 0 <= f <= 500 else None
+
+
+def dnevni_cilj_proteina(profile) -> Optional[int]:
+    if not profile or not profile.tezina_kg:
+        return None
+    kg = profile.tezina_kg
+    # Pri mrsavljenju racunaj na ciljnu tezinu: visak masti ne trazi vise proteina
+    if profile.cilj == "mrsavljenje" and profile.ciljna_tezina_kg and profile.ciljna_tezina_kg < kg:
+        kg = profile.ciljna_tezina_kg
+    return int(round(kg * PROTEINI_PO_KG.get(profile.cilj, 1.6) / 5) * 5)
 
 
 def dnevni_cilj(profile) -> Optional[int]:
@@ -146,25 +167,38 @@ def day_summary(db, datum: str, sada: str = "00:00", vremena: Optional[dict] = N
 
     obroci = []
     procena = 0
+    procena_p = 0.0
     if d:
         for tip in OBROCI:
             meal = (d.get("obroci") or {}).get(tip)
             if not meal:
                 continue
             kcal = to_kcal(meal.get("kalorije"))
+            prot = to_g(meal.get("proteini_g"))
             marker = next((e for e in entries if e.obrok_tip == tip and e.izvor in MARKER_IZVORI), None)
             if marker:
                 status, entry_id = STATUS_PO_IZVORU[marker.izvor], marker.id
             elif now_min >= _minutes(vremena[tip]) + GRACE_MIN:
                 status, entry_id = "procena", None
                 procena += kcal
+                procena_p += prot or 0
             else:
                 status, entry_id = "ceka", None
             obroci.append(
-                {"obrok_tip": tip, "naziv": meal.get("naziv"), "kalorije": kcal, "status": status, "entry_id": entry_id}
+                {
+                    "obrok_tip": tip,
+                    "naziv": meal.get("naziv"),
+                    "kalorije": kcal,
+                    "proteini_g": prot,
+                    "status": status,
+                    "entry_id": entry_id,
+                }
             )
 
     potvrdjeno = sum(e.kalorije or 0 for e in entries)
+    potvrdjeno_p = sum(e.proteini_g or 0 for e in entries)
+    # Pojedeni unosi za koje ne znamo proteine (stari unosi, plan bez proteina) -> zbir je donja granica
+    nepoznato_p = sum(1 for e in entries if (e.kalorije or 0) > 0 and e.proteini_g is None)
     return {
         "datum": datum,
         "ima_plana": d is not None,
@@ -173,11 +207,20 @@ def day_summary(db, datum: str, sada: str = "00:00", vremena: Optional[dict] = N
         "procena": procena,
         "ukupno": potvrdjeno + procena,
         "obroci": obroci,
+        "dnevni_cilj_proteina": dnevni_cilj_proteina(profile),
+        "proteini_potvrdjeno": round(potvrdjeno_p),
+        "proteini_procena": round(procena_p),
+        "proteini_ukupno": round(potvrdjeno_p + procena_p),
+        "proteini_nepoznato": nepoznato_p,
     }
 
 def kcal_offset(db) -> int:
     rows = db.query(KalorijskaKorekcija).filter(KalorijskaKorekcija.status == "prihvaceno").all()
     return sum(r.delta for r in rows)
+
+
+def get_dnevni_cilj_proteina(db) -> Optional[int]:
+    return dnevni_cilj_proteina(db.query(UserProfile).first())
 
 
 def get_dnevni_cilj(db) -> Optional[int]:

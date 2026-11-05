@@ -1,17 +1,18 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from sqlalchemy.orm import Session
-from app.models.database import get_db, FoodLogEntry, UserProfile
-router = APIRouter()
+from app.models.database import get_db, FoodLogEntry
+from app.services.daily_nutrition import get_dnevni_cilj, get_dnevni_cilj_proteina
 
-ACTIVITY_MULTIPLIERS = {"nizak": 1.2, "srednji": 1.55, "visok": 1.725}
+router = APIRouter()
 
 
 class LogEntryRequest(BaseModel):
     datum: str
     naziv: str
     kalorije: int
+    proteini_g: Optional[float] = Field(default=None, ge=0, le=500)
     obrok_tip: Optional[str] = None
     izvor: str = "slobodan"
 
@@ -22,6 +23,7 @@ def add_entry(request: LogEntryRequest, db: Session = Depends(get_db)):
         datum=request.datum,
         naziv=request.naziv,
         kalorije=request.kalorije,
+        proteini_g=request.proteini_g,
         obrok_tip=request.obrok_tip,
         izvor=request.izvor,
     )
@@ -43,18 +45,8 @@ def delete_entry(entry_id: int, db: Session = Depends(get_db)):
 @router.get("/{datum}")
 def get_day_log(datum: str, db: Session = Depends(get_db)):
     entries = db.query(FoodLogEntry).filter(FoodLogEntry.datum == datum).all()
-    profile = db.query(UserProfile).first()
-
-    dnevni_cilj = None
-    if profile:
-        if profile.pol == "muski":
-            bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine + 5
-        else:
-            bmr = 10 * profile.tezina_kg + 6.25 * profile.visina_cm - 5 * profile.godine - 161
-        tdee = bmr * ACTIVITY_MULTIPLIERS.get(profile.nivo_aktivnosti, 1.55)
-        dnevni_cilj = round(tdee - 500) if profile.cilj == "mrsavljenje" else round(tdee)
-
-    ukupno_uneto = sum(e.kalorije for e in entries)
+    dnevni_cilj = get_dnevni_cilj(db)
+    ukupno_uneto = sum(e.kalorije or 0 for e in entries)
 
     return {
         "datum": datum,
@@ -63,12 +55,15 @@ def get_day_log(datum: str, db: Session = Depends(get_db)):
                 "id": e.id,
                 "naziv": e.naziv,
                 "kalorije": e.kalorije,
+                "proteini_g": e.proteini_g,
                 "obrok_tip": e.obrok_tip,
                 "izvor": e.izvor,
             }
             for e in entries
         ],
         "ukupno_uneto": ukupno_uneto,
+        "ukupno_proteina": round(sum(e.proteini_g or 0 for e in entries)),
         "dnevni_cilj_kalorija": dnevni_cilj,
+        "dnevni_cilj_proteina": get_dnevni_cilj_proteina(db),
         "preostalo": (dnevni_cilj - ukupno_uneto) if dnevni_cilj else None,
     }

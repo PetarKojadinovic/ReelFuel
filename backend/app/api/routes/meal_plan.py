@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.models.database import get_db, UserProfile, Recipe, MealPlan
 from app.services.meal_plan_generator import generate_weekly_plan
-from app.services.daily_nutrition import get_dnevni_cilj, prenesi_izmene, week_start
+from app.services.daily_nutrition import get_dnevni_cilj, get_dnevni_cilj_proteina, prenesi_izmene, week_start
 
 log = logging.getLogger("mealplan")
 router = APIRouter()
@@ -26,12 +26,15 @@ def generate_plan(db: Session = Depends(get_db)):
             "naziv_jela": r.naziv_jela,
             "priblizne_kalorije": r.priblizne_kalorije,
             "sastojci": r.sastojci,
+            "proteini_g": r.proteini_g,
         }
             for r in recipes
     ]
 
     try:
-        plan_data = generate_weekly_plan(dnevni_cilj, saved_recipes, profile.raspodela_kalorija)
+        plan_data = generate_weekly_plan(
+            dnevni_cilj, saved_recipes, profile.raspodela_kalorija, get_dnevni_cilj_proteina(db)
+        )
     except Exception:
         log.exception("Greska u mealplan")
         raise HTTPException(status_code=500, detail="Pravljenje plana ishrane nije uspelo. Pokušaj ponovo.")
@@ -45,7 +48,12 @@ def generate_plan(db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_plan)
 
-    return {"plan_id": db_plan.id, "dnevni_cilj_kalorija": dnevni_cilj, "plan": plan_data}
+    return {
+        "plan_id": db_plan.id,
+        "dnevni_cilj_kalorija": dnevni_cilj,
+        "dnevni_cilj_proteina": get_dnevni_cilj_proteina(db),
+        "plan": plan_data,
+    }
 
 
 @router.get("/latest")

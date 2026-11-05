@@ -52,7 +52,11 @@ export default function RecipePicker({
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={typography.bodyStrong} numberOfLines={2}>{item.naziv_jela}</Text>
-                    {item.priblizne_kalorije ? <Text style={typography.bodySecondary}>{item.priblizne_kalorije}</Text> : null}
+                    {item.priblizne_kalorije || item.proteini_g != null ? (
+                      <Text style={typography.bodySecondary}>
+                        {[item.priblizne_kalorije, item.proteini_g != null ? `${Math.round(item.proteini_g)} g proteina` : null].filter(Boolean).join(" · ")}
+                      </Text>
+                    ) : null}
                   </View>
                   <Icon name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
