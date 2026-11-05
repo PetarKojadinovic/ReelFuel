@@ -33,7 +33,14 @@
         }
       ],
       "expo-splash-screen",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "ReelFuel koristi mikrofon da ti zapiše šta si pojeo kad to izgovoriš.",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
     "ios": {
       "icon": "./assets/expo.icon"

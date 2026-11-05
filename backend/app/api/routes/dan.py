@@ -1,13 +1,15 @@
 import logging
+import os
 from datetime import date
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db, FoodLogEntry
-from app.services.daily_nutrition import DEFAULT_VREMENA, MARKER_IZVORI, day_summary, planned_meal, to_kcal
+from app.services.daily_nutrition import DEFAULT_VREMENA, MARKER_IZVORI, day_summary, planned_meal, to_g, to_kcal
+from app.services.glas_obrok import proceni_opis, proceni_snimak
 from app.services.meal_photo import analyze_meal_photo
 
 log = logging.getLogger("dan")
@@ -38,6 +40,7 @@ class AkcijaRequest(BaseModel):
     akcija: Literal["pojeo", "preskocio", "zamena"]
     naziv: Optional[str] = None
     kalorije: Optional[int] = None
+    proteini_g: Optional[float] = Field(default=None, ge=0, le=500)
 
 
 class SlikaRequest(BaseModel):
@@ -74,6 +77,42 @@ def analiza_slike(req: SlikaRequest):
         raise HTTPException(status_code=500, detail="Analiza slike nije uspela")
 
 
+MAX_SNIMAK = 5 * 1024 * 1024  # ~5 min govora u m4a; klijent snima najvise 60 s
+AUDIO_EKSTENZIJE = {".m4a", ".mp4", ".aac", ".3gp", ".webm", ".ogg", ".wav", ".mp3"}
+
+
+class OpisRequest(BaseModel):
+    tekst: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/opis")
+def opis_obroka(req: OpisRequest):
+    """Kratak opis ("dva jaja i hleb") -> naziv, kalorije, proteini. Ništa se ne upisuje u dnevnik."""
+    try:
+        return proceni_opis(req.tekst)
+    except Exception:
+        log.exception("Procena opisa nije uspela")
+        raise HTTPException(status_code=500, detail="Procena nije uspela")
+
+
+@router.post("/glas")
+def glas_obroka(snimak: UploadFile = File(...)):
+    """Snimak glasa -> tekst (Whisper) -> naziv, kalorije, proteini. Snimak se ne čuva."""
+    ext = os.path.splitext(snimak.filename or "")[1].lower() or ".m4a"
+    if ext not in AUDIO_EKSTENZIJE:
+        raise HTTPException(status_code=400, detail="Nepodržan format snimka")
+    sadrzaj = snimak.file.read(MAX_SNIMAK + 1)
+    if not sadrzaj:
+        raise HTTPException(status_code=400, detail="Snimak je prazan")
+    if len(sadrzaj) > MAX_SNIMAK:
+        raise HTTPException(status_code=413, detail="Snimak je predugačak")
+    try:
+        return proceni_snimak(sadrzaj, ext)
+    except Exception:
+        log.exception("Prepoznavanje glasa nije uspelo")
+        raise HTTPException(status_code=500, detail="Prepoznavanje glasa nije uspelo")
+
+
 @router.post("/{datum}/{obrok_tip}")
 def akcija(datum: str, obrok_tip: Literal["dorucak", "rucak", "vecera"], req: AkcijaRequest, db: Session = Depends(get_db)):
     _datum(datum)
@@ -82,15 +121,15 @@ def akcija(datum: str, obrok_tip: Literal["dorucak", "rucak", "vecera"], req: Ak
     if req.akcija == "zamena":
         if not req.naziv or not req.naziv.strip() or req.kalorije is None or not (0 <= req.kalorije <= 5000):
             raise HTTPException(status_code=400, detail="Za zamenu treba naziv i kalorije (0-5000)")
-        naziv, kcal, izvor = req.naziv.strip(), req.kalorije, "zamena"
+        naziv, kcal, prot, izvor = req.naziv.strip(), req.kalorije, req.proteini_g, "zamena"
     else:
         if not meal:
             raise HTTPException(status_code=400, detail="Za taj dan nema planiranog obroka")
         naziv = meal.get("naziv") or "Obrok iz plana"
         if req.akcija == "pojeo":
-            kcal, izvor = to_kcal(meal.get("kalorije")), "plan"
+            kcal, prot, izvor = to_kcal(meal.get("kalorije")), to_g(meal.get("proteini_g")), "plan"
         else:
-            kcal, izvor = 0, "preskoceno"
+            kcal, prot, izvor = 0, 0, "preskoceno"
 
     # Jedan obrok ima najvise jedno stanje
     db.query(FoodLogEntry).filter(
@@ -99,7 +138,7 @@ def akcija(datum: str, obrok_tip: Literal["dorucak", "rucak", "vecera"], req: Ak
         FoodLogEntry.izvor.in_(MARKER_IZVORI),
     ).delete(synchronize_session=False)
 
-    entry = FoodLogEntry(datum=datum, obrok_tip=obrok_tip, naziv=naziv, kalorije=kcal, izvor=izvor)
+    entry = FoodLogEntry(datum=datum, obrok_tip=obrok_tip, naziv=naziv, kalorije=kcal, proteini_g=prot, izvor=izvor)
     db.add(entry)
     db.commit()
     db.refresh(entry)

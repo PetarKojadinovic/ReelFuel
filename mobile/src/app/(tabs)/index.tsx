@@ -236,7 +236,8 @@ export default function DanasScreen() {
     >
       {header}
 
-      <View style={[common.card, styles.summary]}>
+      <View style={[common.card, styles.summaryCard]}>
+      <View style={styles.summary}>
         <CalorieRing progres={cilj ? ukupno / cilj : 0} vrednost={ostalo != null ? Math.max(ostalo, 0) : ukupno} oznaka={ostalo != null ? (ostalo >= 0 ? "kcal još" : "preko") : "kcal"} />
         <View style={{ flex: 1, gap: 6 }}>
           <Text style={[typography.heading, { fontFamily: fonts.extrabold }]}>
@@ -247,6 +248,14 @@ export default function DanasScreen() {
             <Text style={[typography.bodySecondary, { fontSize: 12 }]}>Od toga {dan.procena} kcal pretpostavljeno (nisi potvrdio).</Text>
           )}
         </View>
+      </View>
+      {dan?.dnevni_cilj_proteina != null && (
+        <ProteinBar
+          ukupno={dan.proteini_ukupno ?? 0}
+          cilj={dan.dnevni_cilj_proteina}
+          nepoznato={(dan.proteini_nepoznato ?? 0) > 0}
+        />
+      )}
       </View>
 
       {pregled.ukupno > 0 && (
@@ -292,7 +301,12 @@ export default function DanasScreen() {
                 {o.status === "zamenjeno" && <Text style={typography.bodySecondary}>Jeo si nešto drugo</Text>}
                 {o.status === "preskoceno" && <Text style={typography.bodySecondary}>Preskočeno</Text>}
               </View>
-              <Text style={styles.kcal}>{o.kalorije}</Text>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.kcal}>{o.kalorije}</Text>
+                {o.proteini_g != null && o.status !== "preskoceno" && o.status !== "zamenjeno" && (
+                  <Text style={styles.prot}>{Math.round(o.proteini_g)} g P</Text>
+                )}
+              </View>
             </TouchableOpacity>
 
             {open && (
@@ -327,7 +341,10 @@ export default function DanasScreen() {
                 <Icon name="add" size={20} color={colors.primary} />
               </View>
               <Text style={[typography.bodyStrong, { flex: 1 }]} numberOfLines={2}>{e.naziv}</Text>
-              <Text style={styles.kcal}>{e.kalorije}</Text>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.kcal}>{e.kalorije}</Text>
+                {e.proteini_g != null && <Text style={styles.prot}>{Math.round(e.proteini_g)} g P</Text>}
+              </View>
               <TouchableOpacity onPress={() => obrisiUnos(e)} accessibilityLabel={`Obriši ${e.naziv}`} style={{ padding: 6 }}>
                 <Icon name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -365,6 +382,30 @@ export default function DanasScreen() {
   );
 }
 
+/** Proteini za danas: traka do cilja. Više od cilja je u redu (zeleno, ne upozorenje). */
+function ProteinBar({ ukupno, cilj, nepoznato }: { ukupno: number; cilj: number; nepoznato: boolean }) {
+  const p = cilj > 0 ? Math.min(ukupno / cilj, 1) : 0;
+  const ostalo = cilj - ukupno;
+  return (
+    <View style={styles.protWrap} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(p * 100) }}>
+      <View style={common.row}>
+        <Text style={[typography.bodyStrong, { flex: 1 }]}>Proteini</Text>
+        <Text style={typography.bodyStrong}>
+          {ukupno}
+          <Text style={typography.bodySecondary}> / {cilj} g</Text>
+        </Text>
+      </View>
+      <View style={styles.protTrack}>
+        <View style={[styles.protFill, { width: `${Math.round(p * 100)}%` }]} />
+      </View>
+      <Text style={[typography.bodySecondary, { fontSize: 12 }]}>
+        {ostalo > 0 ? `Još ${ostalo} g do cilja.` : "Cilj za proteine je ispunjen."}
+        {nepoznato ? " Za neke unose ne znam proteine." : ""}
+      </Text>
+    </View>
+  );
+}
+
 function StatusCircle({ status }: { status: string }) {
   if (status === "pojeo" || status === "zamenjeno") {
     return (
@@ -387,7 +428,12 @@ function StatusCircle({ status }: { status: string }) {
 }
 
 const styles = StyleSheet.create({
-  summary: { flexDirection: "row", alignItems: "center", gap: 18, padding: 18, borderRadius: 24 },
+  summaryCard: { padding: 18, borderRadius: 24 },
+  summary: { flexDirection: "row", alignItems: "center", gap: 18 },
+  protWrap: { marginTop: 16, gap: 6 },
+  protTrack: { height: 10, borderRadius: 5, backgroundColor: colors.border, overflow: "hidden" },
+  protFill: { height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  prot: { fontSize: 12, color: colors.textSecondary, fontFamily: fonts.bold },
   mealRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   mealNow: { borderWidth: 2, borderColor: colors.primary },
   kcal: { fontSize: 14, color: colors.textSecondary, fontFamily: fonts.bold },

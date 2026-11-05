@@ -19,6 +19,7 @@ from app.services.daily_nutrition import (
     day_summary,
     plan_week_start,
     plan_za_datum,
+    to_g,
     to_kcal,
     week_start,
 )
@@ -106,7 +107,7 @@ def slotovi(
 
     # Redosled: po datumu, pa dorucak/rucak/vecera (kako se pojavljuju u petlji)
     return {
-        "recept": {"id": recipe.id, "naziv": recipe.naziv_jela, "kalorije": rk},
+        "recept": {"id": recipe.id, "naziv": recipe.naziv_jela, "kalorije": rk, "proteini_g": recipe.proteini_g},
         "danas": today.isoformat(),
         "slotovi": out,
     }
@@ -152,6 +153,7 @@ def ubaci(req: UbaciRequest, db: Session = Depends(get_db)):
     novi_obrok = {
         "naziv": recipe.naziv_jela,
         "kalorije": kcal,
+        "proteini_g": to_g(recipe.proteini_g),
         "izvor": "sacuvan",
         "recipe_id": recipe.id,
         "sastojci": recipe.sastojci or [],

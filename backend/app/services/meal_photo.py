@@ -11,8 +11,9 @@ Pravila:
 - Ako na slici nema hrane, vrati "naziv": null.
 - Kalorije su samo procena: daj jedan broj i opseg (min i max).
 - "pouzdanost" je "niska", "srednja" ili "visoka". Stavi "nisku" ako se porcija ne vidi jasno, ako je jelo mesano ili ne mozes da proceniš velicinu.
+- "proteini_g": procena grama proteina u prikazanoj porciji, ili null.
 - Naziv kratko, na srpskom.
-Vrati ISKLJUCIVO JSON: {"naziv": string ili null, "kalorije": broj ili null, "kalorije_min": broj ili null, "kalorije_max": broj ili null, "pouzdanost": "niska|srednja|visoka"}"""
+Vrati ISKLJUCIVO JSON: {"naziv": string ili null, "kalorije": broj ili null, "proteini_g": broj ili null, "kalorije_min": broj ili null, "kalorije_max": broj ili null, "pouzdanost": "niska|srednja|visoka"}"""
 
 
 def _int(v):
@@ -43,5 +44,6 @@ def analyze_meal_photo(b64: str, media_type: str) -> dict:
         "kalorije": _int(data.get("kalorije")),
         "kalorije_min": _int(data.get("kalorije_min")),
         "kalorije_max": _int(data.get("kalorije_max")),
+        "proteini_g": _int(data.get("proteini_g")),
         "pouzdanost": data.get("pouzdanost") or "niska",
     }

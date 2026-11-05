@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { requireOptionalNativeModule } from "expo";
 import * as ImagePicker from "expo-image-picker";
-import { analyzeMealPhoto, danAkcija, addLogEntry } from "../services/api";
-import { colors } from "../theme";
+import { analyzeMealPhoto, danAkcija, addLogEntry, proceniOpis, type ProcenaObroka } from "../services/api";
+import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
+
+// Mikrofon samo ako postoji u instaliranoj verziji aplikacije (stari build bez expo-audio ne sme da pukne)
+const glasDostupan = Platform.OS !== "web" && !!requireOptionalNativeModule("ExpoAudio");
+const GlasSnimac: typeof import("../components/GlasSnimac").default | null = glasDostupan
+  ? require("../components/GlasSnimac").default
+  : null;
 
 export default function ZamenaScreen() {
   const { datum, obrok_tip, odmah } = useLocalSearchParams<{ datum: string; obrok_tip?: string; odmah?: string }>();
   const [naziv, setNaziv] = useState("");
   const [kalorije, setKalorije] = useState("");
+  const [proteini, setProteini] = useState("");
   const [info, setInfo] = useState<any>(null);
+  const [glas, setGlas] = useState<ProcenaObroka | null>(null);
+  const [procenjujem, setProcenjujem] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -24,7 +34,9 @@ export default function ZamenaScreen() {
       }
       setNaziv(r.naziv);
       setKalorije(r.kalorije != null ? String(r.kalorije) : "");
+      setProteini(r.proteini_g != null ? String(r.proteini_g) : "");
       setInfo(r);
+      setGlas(null);
     } catch {
       Alert.alert("Greška", "Analiza slike nije uspela. Unesi ručno.");
     } finally {
@@ -60,6 +72,28 @@ export default function ZamenaScreen() {
     }
   };
 
+  const primeni = (r: ProcenaObroka) => {
+    setNaziv(r.naziv ?? "");
+    setKalorije(r.kalorije != null ? String(r.kalorije) : "");
+    setProteini(r.proteini_g != null ? String(Math.round(r.proteini_g)) : "");
+    setGlas(r);
+    setInfo(null);
+  };
+
+  // Upisan naziv bez kalorija ("pljeskavica u lepinji") -> procena preko AI
+  const proceniNaziv = async () => {
+    setProcenjujem(true);
+    try {
+      const r = await proceniOpis(naziv.trim());
+      if (!r.naziv) Alert.alert("Nisam razumeo", "Ne prepoznajem hranu u ovom opisu. Unesi kalorije ručno.");
+      else primeni(r);
+    } catch {
+      Alert.alert("Greška", "Procena nije uspela. Unesi kalorije ručno.");
+    } finally {
+      setProcenjujem(false);
+    }
+  };
+
   // Iz panela "+" → "Slikaj obrok": odmah otvori kameru
   const kameraPokrenuta = useRef(false);
   useEffect(() => {
@@ -75,12 +109,18 @@ export default function ZamenaScreen() {
       Alert.alert("Greška", "Unesi naziv i kalorije (0 do 5000).");
       return;
     }
+    // Proteini nisu obavezni: prazno = nepoznato
+    const p = proteini.trim() ? parseFloat(proteini.replace(",", ".")) : null;
+    if (p != null && (isNaN(p) || p < 0 || p > 500)) {
+      Alert.alert("Greška", "Proteini moraju biti broj od 0 do 500 g (ili ostavi prazno).");
+      return;
+    }
     setSaving(true);
     try {
       if (obrok_tip) {
-        await danAkcija(datum as string, obrok_tip, { akcija: "zamena", naziv: naziv.trim(), kalorije: kcal });
+        await danAkcija(datum as string, obrok_tip, { akcija: "zamena", naziv: naziv.trim(), kalorije: kcal, proteini_g: p });
       } else {
-        await addLogEntry({ datum: datum as string, naziv: naziv.trim(), kalorije: kcal, izvor: "slobodan" });
+        await addLogEntry({ datum: datum as string, naziv: naziv.trim(), kalorije: kcal, proteini_g: p, izvor: "slobodan" });
       }
       if (router.canGoBack()) router.back();
       else router.replace("/");
@@ -97,8 +137,10 @@ export default function ZamenaScreen() {
         {obrok_tip ? "Šta si pojeo umesto toga?" : "Šta si pojeo?"}
       </Text>
       <Text style={[typography.bodySecondary, { marginBottom: 20 }]}>
-        Slikaj tanjir da dobiješ procenu, ili unesi ručno.
+        {GlasSnimac ? "Reci šta si jeo, slikaj tanjir, ili unesi ručno." : "Slikaj tanjir da dobiješ procenu, ili unesi ručno."}
       </Text>
+
+      {GlasSnimac && !analyzing && <GlasSnimac onRezultat={primeni} autoStart={odmah === "glas"} />}
 
       {analyzing ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 24 }} />
@@ -130,6 +172,11 @@ export default function ZamenaScreen() {
         placeholder="npr. Pasta sa piletinom"
         placeholderTextColor={colors.textSecondary}
       />
+      {naziv.trim().length > 2 && !kalorije.trim() && (
+        <TouchableOpacity style={[common.outlineButton, { marginBottom: 12 }]} onPress={proceniNaziv} disabled={procenjujem}>
+          <Text style={common.outlineButtonText}>{procenjujem ? "Računam..." : "Izračunaj kalorije iz naziva"}</Text>
+        </TouchableOpacity>
+      )}
 
       <Text style={typography.label}>Kalorije</Text>
       <TextInput
@@ -140,6 +187,31 @@ export default function ZamenaScreen() {
         placeholder="npr. 650"
         placeholderTextColor={colors.textSecondary}
       />
+
+      <Text style={typography.label}>Proteini (g, nije obavezno)</Text>
+      <TextInput
+        style={common.input}
+        value={proteini}
+        onChangeText={setProteini}
+        keyboardType="numeric"
+        placeholder="npr. 35"
+        placeholderTextColor={colors.textSecondary}
+      />
+
+      {glas && (
+        <View style={[common.card, { marginTop: 12 }]}>
+          {!!glas.tekst && <Text style={[typography.bodySecondary, { marginBottom: 6 }]}>Čuo sam: „{glas.tekst}“</Text>}
+          {glas.stavke.map((s, i) => (
+            <View key={i} style={styles.stavka}>
+              <Text style={[typography.body, { flex: 1 }]}>{s.naziv}</Text>
+              <Text style={styles.stavkaKcal}>
+                {s.kalorije} kcal{s.proteini_g != null ? ` · ${Math.round(s.proteini_g)} g P` : ""}
+              </Text>
+            </View>
+          ))}
+          <Text style={styles.note}>Ovo je procena. Ispravi broj ako ne odgovara. Tekst se šalje na procenu (Anthropic API), snimak se ne čuva.</Text>
+        </View>
+      )}
 
       {info && (
         <Text style={styles.note}>
@@ -163,4 +235,6 @@ const styles = StyleSheet.create({
   photoRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   photoBtn: { flex: 1 },
   note: { fontSize: 12, color: colors.textSecondary, marginTop: 12, lineHeight: 18 },
+  stavka: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  stavkaKcal: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.bold },
 });

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.url_guard import GRESKA, host_ok
 from app.models.database import get_db, IngestJob, Recipe, Exercise
+from app.services.daily_nutrition import to_g
 from app.services.ingest_pipeline import run_ingest
 
 router = APIRouter()
@@ -130,6 +131,7 @@ def save(job_id: str, req: SaveRequest, db: Session = Depends(get_db)):
             sastojci=data.get("sastojci") or [],
             koraci=data.get("koraci") or [],
             priblizne_kalorije=data.get("priblizne_kalorije"),
+            proteini_g=to_g(data.get("proteini_g")),
             source_url=job.url,
         )
     else:

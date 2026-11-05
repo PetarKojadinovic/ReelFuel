@@ -1,10 +1,13 @@
 import logging
+import threading
 
 import whisper
 
 log = logging.getLogger("transcription")
 
 _model = None
+# Jedan Whisper model se deli izmedju ingesta i unosa glasom; ne pozivaj ga iz dve niti istovremeno
+_lock = threading.Lock()
 
 # Segmenti iznad ovog praga su verovatno tišina/muzika — tu Whisper najčešće izmišlja tekst
 NO_SPEECH_PRAG = 0.6
@@ -29,10 +32,13 @@ def _segment_ok(seg: dict) -> bool:
     return True
 
 
-def transcribe_audio(audio_path: str) -> str:
+def transcribe_audio(audio_path: str, initial_prompt: str | None = None) -> str:
     """Vraća transkript bez segmenata koji su verovatno halucinacija (prazan string ako nema govora)."""
-    model = get_model()
-    result = model.transcribe(audio_path, language="sr", condition_on_previous_text=False)
+    with _lock:
+        model = get_model()
+        result = model.transcribe(
+            audio_path, language="sr", condition_on_previous_text=False, initial_prompt=initial_prompt
+        )
     segments = result.get("segments") or []
     if not segments:
         return (result.get("text") or "").strip()

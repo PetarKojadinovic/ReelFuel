@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 from app.models.database import UserProfile, MealPlan, Recipe, ChatMessage
+from app.services.daily_nutrition import to_g
 
 load_dotenv()
 log = logging.getLogger("chat")
@@ -60,6 +61,7 @@ TOOLS = [
                 "obrok_tip": {"type": "string", "enum": ["dorucak", "rucak", "vecera"]},
                 "novi_naziv": {"type": "string"},
                 "nove_kalorije": {"type": "integer"},
+                "novi_proteini_g": {"type": "number", "description": "Procena grama proteina u obroku"},
             },
             "required": ["dan", "obrok_tip", "novi_naziv", "nove_kalorije"],
         },
@@ -83,6 +85,7 @@ TOOLS = [
                 },
                 "koraci": {"type": "array", "items": {"type": "string"}},
                 "priblizne_kalorije": {"type": "string"},
+                "proteini_g": {"type": "number", "description": "Procena grama proteina"},
             },
             "required": ["naziv_jela", "sastojci", "koraci"],
         },
@@ -128,6 +131,7 @@ def execute_tool(tool_name: str, tool_input: dict, db: Session) -> str:
                 obroci[obrok_tip] = {
                     "naziv": novi_naziv,
                     "kalorije": nove_kalorije,
+                    "proteini_g": to_g(tool_input.get("novi_proteini_g")),
                     "izvor": "rucna_izmena",
                     "recipe_id": None,
                 }
@@ -148,6 +152,7 @@ def execute_tool(tool_name: str, tool_input: dict, db: Session) -> str:
             sastojci=tool_input["sastojci"],
             koraci=tool_input["koraci"],
             priblizne_kalorije=tool_input.get("priblizne_kalorije"),
+            proteini_g=to_g(tool_input.get("proteini_g")),
             source_url="rucno_dodato_kroz_chat",
         )
         db.add(db_recipe)

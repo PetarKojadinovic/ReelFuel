@@ -18,6 +18,7 @@ class Recipe(Base):
     sastojci = Column(JSON)
     koraci = Column(JSON)
     priblizne_kalorije = Column(String, nullable=True)
+    proteini_g = Column(Float, nullable=True)  # procena za celo jelo / jednu porciju
     source_url = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -60,6 +61,7 @@ class FoodLogEntry(Base):
     obrok_tip = Column(String, nullable=True)  # "dorucak", "rucak", "vecera", ili None za slobodan unos
     naziv = Column(String)
     kalorije = Column(Integer)
+    proteini_g = Column(Float, nullable=True)  # None = nepoznato (stari unosi)
     izvor = Column(String)  # "plan" ili "slobodan"
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -77,6 +79,9 @@ def get_db():
 # Imena su fiksna u kodu (ne dolaze od korisnika).
 NOVE_KOLONE = {
     "shopping_list": {"izvor": "VARCHAR"},
+    "recipes": {"proteini_g": "FLOAT"},
+    "food_log": {"proteini_g": "FLOAT"},
+    "proizvod": {"proteini_100g": "FLOAT"},
 }
 
 
@@ -180,6 +185,7 @@ class Proizvod(Base):
     barkod = Column(String, primary_key=True)
     naziv = Column(String)
     kcal_100g = Column(Float)
+    proteini_100g = Column(Float, nullable=True)
     porcija_g = Column(Float, nullable=True)
     paket_g = Column(Float, nullable=True)
     izvor = Column(String)  # openfoodfacts, etiketa

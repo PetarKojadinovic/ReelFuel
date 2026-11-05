@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { router } from "expo-router";
+import { requireOptionalNativeModule } from "expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { addWeightEntry } from "../services/api";
 import { izvuciPodrzanLink, podrzanLinkIzClipboarda, zapamtiLink } from "../services/clipboardLink";
@@ -8,6 +9,9 @@ import { getTodayDate } from "../utils/date";
 import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
 import { Icon, IconName } from "../components/ui";
+
+// Unos glasom samo ako instalirani build ima expo-audio
+const glasDostupan = Platform.OS !== "web" && !!requireOptionalNativeModule("ExpoAudio");
 
 /** Panel "Šta dodaješ?" — otvara ga dugme + u donjem meniju. Jedno mesto za sav unos. */
 export default function DodajSheet() {
@@ -104,6 +108,17 @@ export default function DodajSheet() {
               <Icon name="arrow-forward" size={22} color={colors.onPrimary} />
             </TouchableOpacity>
           </View>
+
+          {glasDostupan && (
+          <TouchableOpacity
+            style={[common.primaryButton, { flexDirection: "row", gap: 10, minHeight: 56, marginTop: 14 }]}
+            onPress={() => router.replace({ pathname: "/zamena", params: { datum: today, odmah: "glas" } })}
+            accessibilityLabel="Reci šta si jeo"
+          >
+            <Icon name="mic-outline" size={24} color={colors.onPrimary} />
+            <Text style={common.primaryButtonText}>Reci šta si jeo</Text>
+          </TouchableOpacity>
+          )}
 
           <View style={styles.grid}>
             <Tile icon="camera-outline" title="Slikaj obrok" text="Procena kalorija sa slike" onPress={() => router.replace({ pathname: "/zamena", params: { datum: today, odmah: "slika" } })} />

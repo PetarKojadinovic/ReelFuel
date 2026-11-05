@@ -10,6 +10,7 @@ export default function RecipeManualScreen() {
   const [sastojciText, setSastojciText] = useState("");
   const [koraciText, setKoraciText] = useState("");
   const [kalorije, setKalorije] = useState("");
+  const [proteini, setProteini] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -28,6 +29,12 @@ export default function RecipeManualScreen() {
       .filter((line) => line.trim())
       .map((line) => line.trim());
 
+    const p = proteini.trim() ? parseFloat(proteini.replace(",", ".")) : null;
+    if (p != null && (isNaN(p) || p < 0 || p > 500)) {
+      Alert.alert("Greška", "Proteini moraju biti broj od 0 do 500 g (ili ostavi prazno).");
+      return;
+    }
+
     setSaving(true);
     try {
       await addManualRecipe({
@@ -35,6 +42,7 @@ export default function RecipeManualScreen() {
         sastojci,
         koraci,
         priblizne_kalorije: kalorije.trim() || undefined,
+        proteini_g: p,
       });
       router.navigate({ pathname: "/hrana", params: { deo: "recepti" } });
     } catch (err) {
@@ -82,7 +90,17 @@ export default function RecipeManualScreen() {
         style={common.input}
         value={kalorije}
         onChangeText={setKalorije}
-        placeholder="npr. 550 kalorija sa 40g proteina"
+        placeholder="npr. oko 550 kcal"
+        placeholderTextColor={colors.textSecondary}
+      />
+
+      <Text style={typography.label}>Proteini u gramima (opciono)</Text>
+      <TextInput
+        style={common.input}
+        value={proteini}
+        onChangeText={setProteini}
+        keyboardType="numeric"
+        placeholder="npr. 40"
         placeholderTextColor={colors.textSecondary}
       />
 

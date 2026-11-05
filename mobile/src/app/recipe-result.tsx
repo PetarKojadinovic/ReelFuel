@@ -70,6 +70,7 @@ export default function RecipeResultScreen() {
       </View>
 
       {recipe.priblizne_kalorije && <Text style={styles.calories}>Kalorije: {recipe.priblizne_kalorije}</Text>}
+      {recipe.proteini_g != null && <Text style={styles.calories}>Proteini: oko {Math.round(recipe.proteini_g)} g</Text>}
 
       {recipe.id != null && (
         <>

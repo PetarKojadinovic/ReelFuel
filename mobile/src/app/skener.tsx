@@ -134,6 +134,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
 
   const g = parseFloat(grami.replace(",", "."));
   const kcal = proizvod?.kcal_100g && g > 0 ? Math.round((proizvod.kcal_100g * g) / 100) : null;
+  const proteini = proizvod?.proteini_100g != null && g > 0 ? Math.round((proizvod.proteini_100g * g) / 10) / 10 : null;
 
   const sacuvaj = async () => {
     if (!proizvod || kcal == null || !(g > 0) || kcal > 5000) {
@@ -144,9 +145,9 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
     setSaving(true);
     try {
       if (obrokTip) {
-        await danAkcija(datum, obrokTip, { akcija: "zamena", naziv, kalorije: kcal });
+        await danAkcija(datum, obrokTip, { akcija: "zamena", naziv, kalorije: kcal, proteini_g: proteini });
       } else {
-        await addLogEntry({ datum, naziv, kalorije: kcal, izvor: "slobodan" });
+        await addLogEntry({ datum, naziv, kalorije: kcal, proteini_g: proteini, izvor: "slobodan" });
       }
       if (router.canGoBack()) router.back();
       else router.replace("/");
@@ -254,7 +255,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
       <View style={common.card}>
         <Text style={[typography.body, { fontFamily: fonts.extrabold, fontSize: 18 }]}>{proizvod?.naziv}</Text>
         <Text style={[typography.bodySecondary, { marginTop: 4 }]}>
-          {proizvod?.kcal_100g} kcal / 100 g ·{" "}
+          {proizvod?.kcal_100g} kcal{proizvod?.proteini_100g != null ? ` · ${proizvod.proteini_100g} g proteina` : ""} / 100 g ·{" "}
           {proizvod?.izvor === "etiketa" ? "pročitano sa pakovanja" : "Open Food Facts"}
         </Text>
       </View>
@@ -280,6 +281,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
 
       <View style={[common.card, { alignItems: "center", marginTop: 8 }]}>
         <Text style={styles.kcal}>{kcal ?? "—"} kcal</Text>
+        {proteini != null && <Text style={[typography.bodyStrong, { marginBottom: 4 }]}>{proteini} g proteina</Text>}
         <Text style={typography.bodySecondary}>
           {obrokTip ? "upisaće se umesto planiranog obroka" : "dodaje se u današnji dnevnik"}
         </Text>

@@ -10,10 +10,11 @@ SYSTEM_PROMPT = """Iz opisa (caption) i transkripta govora videa sa TikToka/Inst
 Opis cesto sadrzi sastojke i postupak - koristi ga kao glavni izvor, transkript samo dopunjava. Ako se kolicine razlikuju, veruj opisu.
 Transkript moze imati greske prepoznavanja; koristi kontekst da pogodis kuvarske termine.
 Ne izmisljaj sastojke koji nisu pomenuti. Kalorije su procena: napisi ih sa "oko", ili null ako se ne mogu proceniti.
+"proteini_g" je procena grama proteina za isto (celo jelo ili jednu porciju, kao kalorije) iz sastojaka i kolicina; null ako se ne moze proceniti.
 Vrati ISKLJUCIVO validan JSON bez dodatnog teksta.
 
 Format:
-{"naziv_jela": "string", "sastojci": [{"naziv": "string", "kolicina": "string"}], "koraci": ["string"], "priblizne_kalorije": "string ili null"}"""
+{"naziv_jela": "string", "sastojci": [{"naziv": "string", "kolicina": "string"}], "koraci": ["string"], "priblizne_kalorije": "string ili null", "proteini_g": broj ili null}"""
 
 
 def extract_recipe(transcript: str, caption: str = "") -> dict:

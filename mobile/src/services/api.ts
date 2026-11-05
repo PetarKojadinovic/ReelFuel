@@ -106,6 +106,7 @@ export async function addLogEntry(entry: {
   datum: string;
   naziv: string;
   kalorije: number;
+  proteini_g?: number | null;
   obrok_tip?: string;
   izvor: string;
 }) {
@@ -141,6 +142,7 @@ export async function addManualRecipe(recipe: {
   sastojci: { naziv: string; kolicina: string }[];
   koraci: string[];
   priblizne_kalorije?: string;
+  proteini_g?: number | null;
 }) {
   const API_BASE_URL = await getApiUrl();
   const response = await fetch(`${API_BASE_URL}/recipe/manual`, {
@@ -409,7 +411,7 @@ export async function getDan(datum: string) {
 export async function danAkcija(
   datum: string,
   obrokTip: string,
-  body: { akcija: "pojeo" | "preskocio" | "zamena"; naziv?: string; kalorije?: number }
+  body: { akcija: "pojeo" | "preskocio" | "zamena"; naziv?: string; kalorije?: number; proteini_g?: number | null }
 ) {
   const API_BASE_URL = await getApiUrl();
   const response = await fetch(`${API_BASE_URL}/dan/${datum}/${obrokTip}`, {
@@ -432,6 +434,39 @@ export async function analyzeMealPhoto(base64: string, mediaType = "image/jpeg")
   return response.json();
 }
 
+
+export type ProcenaObroka = {
+  tekst: string;
+  naziv: string | null;
+  kalorije: number | null;
+  proteini_g: number | null;
+  stavke: { naziv: string; kalorije: number; proteini_g: number | null }[];
+};
+
+/** Kratak opis obroka ("dva jaja i hleb") -> procena. Ništa se ne upisuje u dnevnik. */
+export async function proceniOpis(tekst: string): Promise<ProcenaObroka> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/dan/opis`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ tekst }),
+  });
+  if (!response.ok) throw new Error(await serverDetail(response, "Procena nije uspela"));
+  return response.json();
+}
+
+/** Snimak glasa (uri sa telefona) -> tekst -> procena. */
+export async function proceniGlas(uri: string): Promise<ProcenaObroka> {
+  const API_BASE_URL = await getApiUrl();
+  const ext = (uri.match(/\.(\w+)$/)?.[1] || "m4a").toLowerCase();
+  const form = new FormData();
+  // React Native šalje fajl sa diska kad dobije { uri, name, type }
+  form.append("snimak", { uri, name: `obrok.${ext}`, type: `audio/${ext === "m4a" ? "mp4" : ext}` } as any);
+  // Bez Content-Type: fetch sam postavlja multipart granicu
+  const response = await fetch(`${API_BASE_URL}/dan/glas`, { method: "POST", headers: authHeaders(), body: form });
+  if (!response.ok) throw new Error(await serverDetail(response, "Prepoznavanje glasa nije uspelo"));
+  return response.json();
+}
 
 async function serverDetail(response: Response, fallback: string): Promise<string> {
   try {
@@ -482,6 +517,7 @@ export type Proizvod = {
   barkod: string;
   naziv?: string;
   kcal_100g?: number | null;
+  proteini_100g?: number | null;
   porcija_g?: number | null;
   paket_g?: number | null;
   izvor?: "openfoodfacts" | "etiketa";

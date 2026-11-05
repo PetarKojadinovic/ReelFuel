@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-02 (bezbednost, popravke plana/liste, testovi). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-05 (proteini, unos glasom). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -18,7 +18,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
                                                        └─ Anthropic API     (claude-haiku-4-5-20251001, tool calling u chatu)
 ```
 - **Backend**: Python 3.13, FastAPI, uvicorn, SQLAlchemy + SQLite (bez migracija), BackgroundTasks + `threading.Semaphore` za ingest.
-- **Mobile**: Expo SDK 57, Expo Router (`src/app`), React Native, TypeScript, `expo-share-intent@8`, `expo-notifications`, `expo-clipboard`, `expo-image-picker`, AsyncStorage.
+- **Mobile**: Expo SDK 57, Expo Router (`src/app`), React Native, TypeScript, `expo-share-intent@8`, `expo-notifications`, `expo-clipboard`, `expo-image-picker`, `expo-audio`, AsyncStorage.
 - **Build/pokretanje**: EAS development build (ne Expo Go). Web verzija (`npx expo start` → w) služi za brzo testiranje.
 - **Auth**: zajednički `X-API-Key` (`APP_SECRET_KEY` ↔ `EXPO_PUBLIC_API_KEY`). Nije prava sigurnost.
 
@@ -115,6 +115,24 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - Nove zavisnosti (samo JS, bez novog EAS builda): `@expo/vector-icons` (Ionicons), `@expo-google-fonts/nunito`.
 - Provereno: `tsc --noEmit` prolazi; Metro sastavlja Android bundle za sve nove ekrane (font i ikone uključeni). **Na telefonu nije provereno.**
 
+## 6h. Proteini (2026-11-05)
+- Dnevni cilj proteina: `dnevni_cilj_proteina` / `get_dnevni_cilj_proteina` u `daily_nutrition.py` (jedini izvor). g/kg: mršavljenje 2.0 (na ciljnu težinu ako je niža od trenutne), više mišića 1.8, održavanje 1.6; zaokruženo na 5 g.
+- Nove kolone (preko `NOVE_KOLONE`, baza se ne briše): `Recipe.proteini_g`, `FoodLogEntry.proteini_g`, `Proizvod.proteini_100g`. NULL = nepoznato (stari unosi).
+- Izvori proteina: izvlačenje recepta (LLM), ručni recept, chat alati (`add_recipe.proteini_g`, `swap_meal.novi_proteini_g`), nov jelovnik (svaki obrok `proteini_g`, LLM dobija cilj proteina), `/plan/ubaci` (iz recepta), slika obroka, bar-kod (Open Food Facts `proteins_100g` / etiketa), ručni unos u "Nešto drugo".
+- `/dan/{datum}` vraća `dnevni_cilj_proteina`, `proteini_potvrdjeno`, `proteini_procena`, `proteini_ukupno`, `proteini_nepoznato` (broj pojedenih unosa bez podatka) i `proteini_g` po obroku. `POST /dan/{datum}/{tip}` i `POST /log/` primaju `proteini_g`. `/profile/` i `/mealplan/generate` vraćaju `dnevni_cilj_proteina`.
+- Mobile: Danas ima traku "Proteini X / Y g" ispod kruga kalorija (preko cilja nije upozorenje) i "g P" pored obroka; polje za proteine u `zamena.tsx` i `recipe-manual.tsx`; skener računa proteine po gramima; recepti prikazuju proteine.
+- Usput: `GET /log/{datum}` sada koristi `get_dnevni_cilj` (ranije je računao cilj sam, bez korekcija); `POST /recipe/` više ne šalje `frame_paths` u `extract_recipe` (pucalo je sa TypeError).
+- Stari jelovnik i stari recepti nemaju proteine → traka pokazuje manje dok se ne napravi nov jelovnik.
+- Provereno: pytest 30/30, `tsc --noEmit` prolazi, dodavanje kolona na KOPIJI prave baze radi. LLM procene proteina i ekran na telefonu/webu **nisu provereni**.
+
+## 6i. Unos obroka glasom (2026-11-05)
+- Korisnik kaže "pojeo sam dva jaja i parče hleba" → Whisper (lokalno, `language="sr"` + `initial_prompt` latinicom) → Claude izdvoji stavke sa kalorijama i proteinima → popuni formu u `zamena.tsx` → korisnik potvrdi (upis ide postojećim putem: `danAkcija(zamena)` ili `POST /log/`).
+- Backend (`services/glas_obrok.py`, rute u `dan.py`): `POST /dan/glas` (multipart polje `snimak`, najviše 5 MB, ekstenzije m4a/mp4/aac/3gp/webm/ogg/wav/mp3; snimak se briše odmah posle prepoznavanja) i `POST /dan/opis` (`{"tekst"}`, do 1000 znakova). Oba vraćaju `{tekst, naziv, kalorije, proteini_g, stavke[]}` i ništa ne upisuju; `naziv: null` = nema hrane u tekstu.
+- `transcription.py`: Whisper poziv je pod `threading.Lock` (ingest i glas dele model); `transcribe_audio` prima opcioni `initial_prompt`.
+- Mobile: `components/GlasSnimac.tsx` (`expo-audio`, najviše 60 s, dugme "Reci šta si jeo" / "Gotovo"), učitava se LENJO preko `requireOptionalNativeModule("ExpoAudio")` u `zamena.tsx` i `dodaj.tsx`. Panel "+" ima veliko dugme "Reci šta si jeo" (`/zamena?odmah=glas` odmah počinje snimanje). U `zamena.tsx` i dugme "Izračunaj kalorije iz naziva" (`/dan/opis`, radi i na webu i na starom buildu).
+- `app.json`: plugin `expo-audio` (`recordAudioAndroid: true`, tekst dozvole za mikrofon). **Treba NOVI EAS development build**; stari build ne prikazuje dugme za glas.
+- Provereno: pytest 37/37; uživo na laptopu `proceni_opis` (Haiku) i `proceni_snimak` (Whisper + Haiku, sintetizovan engleski snimak) daju razumne brojeve; `tsc` prolazi; `expo export --platform android` sastavlja bundle. Srpski govor sa telefona i snimanje u aplikaciji **nisu provereni**.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
@@ -135,7 +153,7 @@ Bezbednost / operativno:
 
 ## 8. Roadmap / ideje (po prioritetu)
 1. Rotirati ključeve; README, logo.
-2. Novi EAS build (expo-clipboard) i provera faze 8 na telefonu.
+2. Novi EAS build (expo-clipboard, expo-audio) i provera faze 8 i unosa glasom na telefonu.
 5. Faza 5: hosting (VPS), HTTPS, prava autentikacija (nalozi/JWT), push preko FCM, cron za nedeljni plan.
 7. Ideje: kalendar B (raspored treninga po slobodnim terminima), deljenje liste za kupovinu, export/backup, vreme/vremenski uslovi za trening, Health Connect ako korisnik dobije uređaj.
 

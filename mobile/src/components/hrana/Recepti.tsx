@@ -72,7 +72,11 @@ export default function Recepti({ refreshKey }: { refreshKey: number }) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={typography.bodyStrong} numberOfLines={2}>{r.naziv_jela}</Text>
-            {r.priblizne_kalorije ? <Text style={typography.bodySecondary}>{r.priblizne_kalorije}</Text> : null}
+            {r.priblizne_kalorije || r.proteini_g != null ? (
+              <Text style={typography.bodySecondary}>
+                {[r.priblizne_kalorije, r.proteini_g != null ? `${Math.round(r.proteini_g)} g proteina` : null].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
           </View>
           <TouchableOpacity onPress={() => obrisi(r)} style={{ padding: 8 }} accessibilityLabel={`Obriši ${r.naziv_jela}`}>
             <Icon name="trash-outline" size={20} color={colors.textSecondary} />
