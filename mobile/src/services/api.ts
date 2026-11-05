@@ -458,10 +458,13 @@ export async function proceniOpis(tekst: string): Promise<ProcenaObroka> {
 /** Snimak glasa (uri sa telefona) -> tekst -> procena. */
 export async function proceniGlas(uri: string): Promise<ProcenaObroka> {
   const API_BASE_URL = await getApiUrl();
-  const ext = (uri.match(/\.(\w+)$/)?.[1] || "m4a").toLowerCase();
+  // Expo fetch ne prima React Native oblik { uri, name, type } ("Unsupported FormDataPart implementation"),
+  // nego File iz expo-file-system (ima bytes(), name i type). Učitava se ovde da web ne bi pukao.
+  const { File } = require("expo-file-system") as typeof import("expo-file-system");
+  const fajl = new File(uri);
+  if (!fajl.exists) throw new Error("Snimak nije pronađen");
   const form = new FormData();
-  // React Native šalje fajl sa diska kad dobije { uri, name, type }
-  form.append("snimak", { uri, name: `obrok.${ext}`, type: `audio/${ext === "m4a" ? "mp4" : ext}` } as any);
+  form.append("snimak", fajl as any, fajl.name || "obrok.m4a");
   // Bez Content-Type: fetch sam postavlja multipart granicu
   const response = await fetch(`${API_BASE_URL}/dan/glas`, { method: "POST", headers: authHeaders(), body: form });
   if (!response.ok) throw new Error(await serverDetail(response, "Prepoznavanje glasa nije uspelo"));
