@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { startIngest, getIngestJob, saveIngestJob, odbaciIngestJob } from "../services/api";
-import { colors, fonts } from "../theme";
+import { colors } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, DetailHeader, Message, StatCard, TextButton } from "../components/ui";
 
 const TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -90,93 +91,87 @@ export default function IngestScreen() {
 
   if (error || job.status === "greska") {
     return (
-      <View style={[common.centered, { padding: 20 }]}>
-        <Text style={[typography.body, { textAlign: "center", marginBottom: 20 }]}>
-          {error || job.greska}
-        </Text>
-        <TouchableOpacity style={common.primaryButton} onPress={() => run()}>
-          <Text style={common.primaryButtonText}>Pokušaj ponovo</Text>
-        </TouchableOpacity>
-      </View>
+      <Message
+        icon="alert-circle-outline"
+        iconColor={colors.warning}
+        title="Nije uspelo"
+        text={error || job.greska}
+        action="Pokušaj ponovo"
+        onAction={() => run()}
+      />
     );
   }
 
   if (job.status === "potrebna_odluka") {
     return (
-      <View style={[common.centered, { padding: 20 }]}>
-        <Text style={[typography.title, { marginBottom: 8 }]}>Šta je ovo?</Text>
-        <Text style={[typography.bodySecondary, { marginBottom: 24, textAlign: "center" }]}>
-          Nisam siguran da li je video recept ili vežba.
-        </Text>
-        <TouchableOpacity
-          style={[common.primaryButton, { width: "100%", marginBottom: 12 }]}
-          onPress={() => run("recept")}
-        >
-          <Text style={common.primaryButtonText}>Recept</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[common.secondaryButton, { width: "100%" }]} onPress={() => run("vezba")}>
-          <Text style={common.secondaryButtonText}>Vežba</Text>
-        </TouchableOpacity>
-      </View>
+      <Message
+        icon="help-circle-outline"
+        title="Šta je ovo?"
+        text="Nisam siguran da li je video recept ili vežba."
+        action="Recept"
+        onAction={() => run("recept")}
+        secondary="Vežba"
+        onSecondary={() => run("vezba")}
+      />
     );
   }
 
   if (job.status === "gotovo" && job.rezultat) {
     const r = job.rezultat;
+    const recept = job.tip === "recept";
     return (
-      <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
-        {job.tip === "recept" ? (
+      <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+        {recept ? (
           <>
-            <Text style={[typography.title, { marginBottom: 16 }]}>{r.naziv_jela}</Text>
-            <View style={common.card}>
-              <Text style={styles.section}>Sastojci</Text>
-              {(r.sastojci || []).map((s: any, i: number) => (
-                <Text key={i} style={styles.item}>
-                  • {s.kolicina} {s.naziv}
-                </Text>
-              ))}
-            </View>
-            {r.priblizne_kalorije && <Text style={styles.calories}>Kalorije: {r.priblizne_kalorije}</Text>}
-            {r.proteini_g != null && <Text style={styles.calories}>Proteini: oko {Math.round(r.proteini_g)} g</Text>}
+            <DetailHeader icon="restaurant-outline" eyebrow="Recept" title={r.naziv_jela || "Recept"} />
+            {(r.priblizne_kalorije || r.proteini_g != null) && (
+              <View style={common.row}>
+                {r.priblizne_kalorije ? <StatCard label="Kalorije" value={r.priblizne_kalorije} /> : null}
+                {r.proteini_g != null ? <StatCard label="Proteini" value={Math.round(r.proteini_g)} unit="g" /> : null}
+              </View>
+            )}
+            <Card>
+              <Text style={[typography.heading, { marginBottom: 10 }]}>Sastojci</Text>
+              {(r.sastojci ?? []).length === 0 ? (
+                <Text style={typography.bodySecondary}>Sastojci nisu izvučeni iz videa.</Text>
+              ) : (
+                (r.sastojci ?? []).map((s: any, i: number) => (
+                  <Text key={i} style={typography.listItem}>
+                    • {s.kolicina} {s.naziv}
+                  </Text>
+                ))
+              )}
+            </Card>
           </>
         ) : (
           <>
-            <Text style={[typography.title, { marginBottom: 16 }]}>{r.naziv_vezbe}</Text>
-            <View style={common.card}>
-              <Text style={styles.item}>Grupa mišića: {r.grupa_misica}</Text>
-              <Text style={styles.item}>Serije i ponavljanja: {r.serije_i_ponavljanja}</Text>
-              {r.detektovano_ponavljanja != null && (
-                <Text style={styles.item}>Detektovano ponavljanja (AI): {r.detektovano_ponavljanja}</Text>
-              )}
+            <DetailHeader icon="barbell-outline" eyebrow="Vežba" title={r.naziv_vezbe || "Vežba"} />
+            <View style={common.row}>
+              <StatCard label="Serije i ponavljanja" value={r.serije_i_ponavljanja || "—"} />
+              {r.detektovano_ponavljanja != null ? <StatCard label="Izbrojano (AI)" value={r.detektovano_ponavljanja} /> : null}
             </View>
+            {r.grupa_misica ? (
+              <Card>
+                <Text style={typography.bodySecondary}>Grupa mišića</Text>
+                <Text style={typography.bodyStrong}>{r.grupa_misica}</Text>
+              </Card>
+            ) : null}
           </>
         )}
-        <Text style={[typography.bodySecondary, { marginBottom: 16 }]}>
-          Izvučeno automatski, može da sadrži greške.
-        </Text>
+        <Text style={[typography.note, { marginBottom: 16 }]}>Izvučeno automatski, može da sadrži greške.</Text>
         <TouchableOpacity style={common.primaryButton} onPress={handleSave} disabled={saving}>
           <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj"}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{ marginTop: 14, alignItems: "center" }} onPress={handleOdbaci}>
-          <Text style={typography.bodySecondary}>Odbaci</Text>
-        </TouchableOpacity>
+        <TextButton title="Odbaci" onPress={handleOdbaci} />
       </ScrollView>
     );
   }
 
   return (
-    <View style={[common.centered, { padding: 20 }]}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={[typography.body, { marginTop: 20 }]}>{job.faza || "Obrađujem..."}</Text>
-      <Text style={[typography.bodySecondary, { marginTop: 8, textAlign: "center" }]}>
-        Možeš da izađeš — rezultat će te čekati na početnoj, u „Spremno za pregled".
-      </Text>
-    </View>
+    <Message
+      loading
+      title={job.faza || "Obrađujem..."}
+      text={"Možeš da izađeš — rezultat će te čekati na početnoj, u „Novo iz linkova“."}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  section: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 10 },
-  item: { fontSize: 15, color: colors.textPrimary, marginBottom: 6, lineHeight: 22 },
-  calories: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 12 },
-});

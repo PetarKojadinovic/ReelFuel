@@ -231,7 +231,7 @@ export default function DodajUPlanScreen() {
                   )}
                 </View>
                 <Text style={styles.current}>
-                  Sada: {s.trenutni_naziv} ({s.trenutne_kalorije} kcal){s.izvor === "sacuvan" ? " 📌" : ""}
+                  Sada: {s.trenutni_naziv} ({s.trenutne_kalorije} kcal){s.izvor === "sacuvan" ? " · tvoj recept" : ""}
                 </Text>
                 <Text style={typography.bodySecondary}>{razlikaTekst(s.razlika)}</Text>
               </TouchableOpacity>
@@ -240,9 +240,6 @@ export default function DodajUPlanScreen() {
         </View>
       ))}
 
-      {slotovi.some((s) => s.izvor === "sacuvan") && (
-        <Text style={[typography.bodySecondary, { marginBottom: spacing.md }]}>📌 = već ubačen tvoj recept</Text>
-      )}
 
       <TouchableOpacity style={{ marginTop: 4, alignItems: "center" }} onPress={() => router.navigate({ pathname: "/hrana", params: { deo: "recepti" } })}>
         <Text style={typography.bodySecondary}>Preskoči, samo sačuvaj recept</Text>

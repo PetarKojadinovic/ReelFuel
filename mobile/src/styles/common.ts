@@ -27,11 +27,19 @@ export const typography = StyleSheet.create({
   label: { fontSize: 14, fontFamily: fonts.bold, color: colors.textSecondary, marginTop: 16, marginBottom: 8 },
   // Mala oznaka iznad naziva: "DORUČAK · 8:00"
   eyebrow: { fontSize: 12, fontFamily: fonts.extrabold, color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 },
+  // Stavka u listi (sastojci, koraci)
+  listItem: { fontSize: 15, fontFamily: fonts.regular, color: colors.textPrimary, lineHeight: 22, marginBottom: 6 },
+  // Sitna napomena na dnu ekrana
+  note: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
+  // Veliki broj (kcal, 5/7...)
+  bigNumber: { fontSize: 34, fontFamily: fonts.black, color: colors.primary },
 });
 
 export const common = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   screenPadding: { padding: spacing.lg, paddingTop: 56, paddingBottom: 40 },
+  // Ekran van tabova (ima zaglavlje iz Stack-a, pa ne treba veliki razmak gore)
+  stackPadding: { padding: spacing.lg, paddingBottom: 40 },
   centered: { flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" },
 
   card: {
@@ -125,4 +133,34 @@ export const common = StyleSheet.create({
 
   // Krug za status (pojedeno / čeka)
   checkCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center" },
+
+  // Mala dugmad za izbor (porcija, 50 g, 100 g...)
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 14, fontFamily: fonts.extrabold, color: colors.textSecondary },
+  chipTextActive: { color: colors.onPrimary },
+
+  // Kartica koja se bira (jedna od više opcija)
+  option: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: "transparent",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  optionActive: { borderColor: colors.primary },
 });

@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-05 (proteini, unos glasom). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-06 (provera na telefonu, novi README, sporedni ekrani na nove komponente). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -31,7 +31,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 | 2 | Podsetnici u vreme obroka (`notifications.ts`, `podsetnici.tsx`), dugmad "Slikaj / unesi", "Po planu", "Preskočio"; foto obrok (`meal_photo.py`) | Potvrđeno na telefonu (2026-11-01) |
 | 3 | Automatski nedeljni plan (`nedelja_plan.py`), korekcija kalorijskog cilja (`kalorijska_korekcija.py`), `NedeljaIKorekcija.tsx` | Potvrđeno radi |
 | 4 | Health Connect (sat/vaga) | **Preskočeno** — korisnik nema uređaje; kod nije primenjen, `app.json` nepromenjen |
-| 8 | Spremno za pregled, link iz clipboard-a, plan po datumima, lista iz recepta (vidi 6d) | Napisano, testiran backend; telefon nije proveren |
+| 8 | Spremno za pregled, link iz clipboard-a, plan po datumima, lista iz recepta (vidi 6d) | Potvrđeno na telefonu (2026-11-05, novi EAS build) |
 | 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **Nije započeto.** Istraženo: Oracle Always Free (2 OCPU/12 GB posle smanjenja iz juna 2026), Hetzner CX23 (~€4–6/mes), Contabo. Odluka odložena ("prvo automatizacija"). |
 
 ## 4. Backend: rute (prefiksi iz `main.py`)
@@ -134,6 +134,16 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - `app.json`: plugin `expo-audio` (`recordAudioAndroid: true`, tekst dozvole za mikrofon). **Treba NOVI EAS development build**; stari build ne prikazuje dugme za glas.
 - Provereno: pytest 37/37; uživo na laptopu `proceni_opis` (Haiku) i `proceni_snimak` (Whisper + Haiku, sintetizovan engleski snimak) daju razumne brojeve; `tsc` prolazi; `expo export --platform android` sastavlja bundle. Srpski govor sa telefona i snimanje u aplikaciji **nisu provereni**.
 
+**2026-11-05: korisnik je napravio novi EAS build i potvrdio da sve iz 6a–6i radi na telefonu** (novi dizajn, proteini, unos glasom, clipboard, pregled, dodaj u plan). Napomene "nije provereno" iznad su istorijske.
+
+## 6j. Sporedni ekrani na nove komponente (2026-11-06)
+- Nove zajedničke komponente u `components/ui.tsx`: `IconTile` (kvadrat sa ikonom), `DetailHeader` (ikona + oznaka + naslov), `StatCard` (broj sa oznakom), `Message` (ceo ekran: učitavanje / greška / pitanje sa 1–2 dugmeta), `TextButton`.
+- Novi stilovi u `styles/common.ts`: `common.stackPadding` (ekrani van tabova, imaju zaglavlje), `common.chip*` (izbor porcije), `common.option*` (kartica koja se bira), `typography.listItem`, `typography.note`, `typography.bigNumber`.
+- Prepravljeni: `ingest`, `pregled`, `recipe-result`, `exercise-result`, `settings`, `podsetnici`, `weekly-report`, `skener`. Emoji zamenjeni ikonama (i u `chat` i `dodaj-u-plan`); svaki tekst ima Nunito font.
+- Usput: `weekly-report` pokazuje grešku veze umesto "Podesi profil" kad server ne odgovori; `exercise-result` ne puca na loš parametar; `podsetnici` više ne pominje stari "Dnevnik".
+- Provereno: `tsc --noEmit` prolazi, `expo export --platform android` sastavlja bundle. **Na telefonu nije provereno** (ne treba novi build, samo reload).
+- Logo: 5 predloga na https://claude.ai/artifact/MkRYc7ij2GMqHgouBnd5fh (munja, play-list, tanjir, prsten, kap goriva). **Korisnik izabrao 4. predlog (prsten sa slovom R)** (2026-11-06) — još nije pretvoren u PNG ikone niti ubačen u `app.json`.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
@@ -141,9 +151,7 @@ Funkcionalni:
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
-- `README.md` je zastareo.
-- Stariji sporedni ekrani (ingest, pregled, skener, recipe-result, settings, podsetnici, weekly-report...) dobili su nove boje i font samo tamo gde su imali `fontWeight`; nisu prepravljeni na nove komponente.
-- Nema logoa/ikone aplikacije (podrazumevane Expo ikone).
+- Nema logoa/ikone aplikacije (podrazumevane Expo ikone); izabran 4. predlog iz 6j (prsten sa R), čeka izradu PNG ikona.
 - Testovi samo za deo backenda (`backend/tests/`); nema mobile testova. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
 
 Bezbednost / operativno:
@@ -153,8 +161,9 @@ Bezbednost / operativno:
 - Pred hosting: HTTP bez TLS-a, deljeni ključ u APK-u, `/docs` dostupan bez ključa, nema rate limita (trošak LLM-a).
 
 ## 8. Roadmap / ideje (po prioritetu)
-1. Rotirati ključeve; README, logo.
-2. Novi EAS build (expo-clipboard, expo-audio) i provera faze 8 i unosa glasom na telefonu.
+1. Logo/ikona aplikacije (izabran 4. predlog iz 6j → PNG ikone + `app.json` → novi EAS build).
+2. Podesiti Whisper prag na pravim reelovima.
+3. Backup/export baze — odloženo dok su u bazi samo testni podaci.
 5. Faza 5: hosting (VPS), HTTPS, prava autentikacija (nalozi/JWT), push preko FCM, cron za nedeljni plan.
 7. Ideje: kalendar B (raspored treninga po slobodnim terminima), deljenje liste za kupovinu, export/backup, vreme/vremenski uslovi za trening, Health Connect ako korisnik dobije uređaj.
 

@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { ScrollView, View, Text, TouchableOpacity, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { generateShoppingListFromRecipe } from "../services/api";
-import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, DetailHeader, StatCard } from "../components/ui";
 
 export default function RecipeResultScreen() {
   const { recipe: recipeParam } = useLocalSearchParams();
@@ -40,55 +40,53 @@ export default function RecipeResultScreen() {
   };
 
   return (
-    <ScrollView style={[common.container, { padding: 20 }]}>
-      <Text style={[typography.title, { marginBottom: 20 }]}>{recipe.naziv_jela || "Recept"}</Text>
+    <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+      <DetailHeader icon="restaurant-outline" eyebrow="Recept" title={recipe.naziv_jela || "Recept"} />
 
-      <View style={common.card}>
-        <Text style={styles.sectionTitle}>Sastojci</Text>
+      {(recipe.priblizne_kalorije || recipe.proteini_g != null) && (
+        <View style={common.row}>
+          {recipe.priblizne_kalorije ? <StatCard label="Kalorije" value={recipe.priblizne_kalorije} /> : null}
+          {recipe.proteini_g != null ? <StatCard label="Proteini" value={Math.round(recipe.proteini_g)} unit="g" /> : null}
+        </View>
+      )}
+
+      <Card>
+        <Text style={[typography.heading, { marginBottom: 10 }]}>Sastojci</Text>
         {sastojci.length === 0 ? (
-          <Text style={styles.empty}>Sastojci nisu izvučeni iz videa.</Text>
+          <Text style={typography.bodySecondary}>Sastojci nisu izvučeni iz videa.</Text>
         ) : (
           sastojci.map((s: any, i: number) => (
-            <Text key={i} style={styles.item}>
+            <Text key={i} style={typography.listItem}>
               • {s.kolicina} {s.naziv}
             </Text>
           ))
         )}
-      </View>
+      </Card>
 
-      <View style={common.card}>
-        <Text style={styles.sectionTitle}>Koraci</Text>
+      <Card>
+        <Text style={[typography.heading, { marginBottom: 10 }]}>Koraci</Text>
         {koraci.length === 0 ? (
-          <Text style={styles.empty}>Koraci nisu izvučeni iz videa.</Text>
+          <Text style={typography.bodySecondary}>Koraci nisu izvučeni iz videa.</Text>
         ) : (
           koraci.map((k: string, i: number) => (
-            <Text key={i} style={styles.item}>
+            <Text key={i} style={typography.listItem}>
               {i + 1}. {k}
             </Text>
           ))
         )}
-      </View>
-
-      {recipe.priblizne_kalorije && <Text style={styles.calories}>Kalorije: {recipe.priblizne_kalorije}</Text>}
-      {recipe.proteini_g != null && <Text style={styles.calories}>Proteini: oko {Math.round(recipe.proteini_g)} g</Text>}
+      </Card>
 
       {recipe.id != null && (
         <>
           <TouchableOpacity
-            style={[common.primaryButton, { marginTop: 16 }]}
+            style={[common.primaryButton, { marginTop: 8 }]}
             onPress={() => router.push({ pathname: "/dodaj-u-plan", params: { recipe_id: String(recipe.id) } })}
           >
             <Text style={common.primaryButtonText}>Dodaj u jelovnik</Text>
           </TouchableOpacity>
           {sastojci.length > 0 && (
-            <TouchableOpacity
-              style={[common.secondaryButton, { marginTop: 12, marginBottom: 40 }]}
-              onPress={dodajUListu}
-              disabled={dodajem}
-            >
-              <Text style={common.secondaryButtonText}>
-                {dodajem ? "Dodajem..." : "Dodaj sastojke u kupovinu"}
-              </Text>
+            <TouchableOpacity style={[common.secondaryButton, { marginTop: 10 }]} onPress={dodajUListu} disabled={dodajem}>
+              <Text style={common.secondaryButtonText}>{dodajem ? "Dodajem..." : "Dodaj sastojke u kupovinu"}</Text>
             </TouchableOpacity>
           )}
         </>
@@ -96,10 +94,3 @@ export default function RecipeResultScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary, marginBottom: 10 },
-  item: { fontSize: 15, color: colors.textPrimary, marginBottom: 6, lineHeight: 22 },
-  empty: { fontSize: 14, color: colors.textSecondary },
-  calories: { marginTop: 4, fontSize: 16, fontFamily: fonts.bold, color: colors.primary },
-});

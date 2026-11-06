@@ -4,6 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import { getIngestPregled, saveIngestJob, odbaciIngestJob, PregledStavka } from "../services/api";
 import { colors, fonts } from "../theme";
 import { common, typography, spacing } from "../styles/common";
+import { EmptyState, Icon, IconTile, Message, type IconName } from "../components/ui";
 
 const OSVEZI_MS = 4000;
 
@@ -20,11 +21,11 @@ function opisStatusa(s: PregledStavka): string {
   }
 }
 
-function ikona(s: PregledStavka): string {
-  if (s.status === "greska") return "⚠️";
-  if (s.status === "u_toku") return "⏳";
-  if (s.status === "potrebna_odluka") return "❓";
-  return s.tip === "recept" ? "🍳" : "💪";
+function ikona(s: PregledStavka): { name: IconName; color: string } {
+  if (s.status === "greska") return { name: "alert-circle-outline", color: colors.warning };
+  if (s.status === "u_toku") return { name: "hourglass-outline", color: colors.textSecondary };
+  if (s.status === "potrebna_odluka") return { name: "help-circle-outline", color: colors.warning };
+  return { name: s.tip === "recept" ? "restaurant-outline" : "barbell-outline", color: colors.primary };
 }
 
 export default function PregledScreen() {
@@ -36,7 +37,7 @@ export default function PregledScreen() {
   const load = useCallback(async () => {
     try {
       const data = await getIngestPregled();
-      setStavke(data);
+      setStavke(data ?? []);
     } catch {
       Alert.alert("Greška", "Lista za pregled nije učitana. Proveri vezu sa serverom.");
     } finally {
@@ -101,48 +102,52 @@ export default function PregledScreen() {
     if (neuspelo > 0) Alert.alert("Greška", `Nije sačuvano: ${neuspelo}`);
   };
 
-  if (loading) {
-    return (
-      <View style={common.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+  if (loading) return <Message loading />;
 
   return (
     <FlatList
       style={common.container}
       data={stavke}
       keyExtractor={(s) => s.id}
-      contentContainerStyle={{ padding: spacing.lg }}
+      contentContainerStyle={common.stackPadding}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={colors.primary} />}
       ListHeaderComponent={
-        <>
-          <Text style={[typography.bodySecondary, { marginBottom: spacing.md }]}>
-            Sve što je stiglo preko linka čeka ovde. ✓ čuva u biblioteku, ✕ odbacuje. Dodirni stavku za detalje.
-          </Text>
-          {spremne.length > 1 && (
-            <TouchableOpacity
-              style={[common.primaryButton, { marginBottom: spacing.md }]}
-              onPress={sacuvajSve}
-              disabled={radi !== null}
-            >
-              <Text style={common.primaryButtonText}>
-                {radi === "sve" ? "Čuvam..." : `✓ Sačuvaj sve spremno (${spremne.length})`}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </>
+        stavke.length > 0 ? (
+          <>
+            <Text style={[typography.bodySecondary, { marginBottom: spacing.md }]}>
+              Sve što je stiglo preko linka čeka ovde. Kvačica čuva u biblioteku, X odbacuje. Dodirni stavku za detalje.
+            </Text>
+            {spremne.length > 1 && (
+              <TouchableOpacity
+                style={[common.primaryButton, styles.sveBtn]}
+                onPress={sacuvajSve}
+                disabled={radi !== null}
+              >
+                <Icon name="checkmark-done" size={20} color={colors.onPrimary} />
+                <Text style={common.primaryButtonText}>
+                  {radi === "sve" ? "Čuvam..." : `Sačuvaj sve spremno (${spremne.length})`}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : null
       }
-      ListEmptyComponent={<Text style={common.emptyText}>Ništa ne čeka pregled. Podeli reel u ReelFuel!</Text>}
+      ListEmptyComponent={
+        <EmptyState
+          icon="file-tray-outline"
+          title="Ništa ne čeka pregled"
+          text="Podeli reel u ReelFuel ili nalepi link preko dugmeta +."
+        />
+      }
       renderItem={({ item }) => {
         const zauzeto = radi === item.id || radi === "sve";
+        const ik = ikona(item);
         return (
           <TouchableOpacity
             style={[common.card, styles.card]}
             onPress={() => router.push({ pathname: "/ingest", params: { job_id: item.id } })}
           >
-            <Text style={styles.ikona}>{ikona(item)}</Text>
+            <IconTile icon={ik.name} color={ik.color} />
             <View style={{ flex: 1 }}>
               <Text style={styles.naziv} numberOfLines={2}>
                 {item.naziv || item.url}
@@ -156,13 +161,21 @@ export default function PregledScreen() {
             ) : (
               <View style={styles.dugmad}>
                 {item.status === "gotovo" && (
-                  <TouchableOpacity style={styles.ok} onPress={() => sacuvaj(item)}>
-                    <Text style={styles.okText}>✓</Text>
+                  <TouchableOpacity
+                    style={[common.checkCircle, { backgroundColor: colors.primary }]}
+                    onPress={() => sacuvaj(item)}
+                    accessibilityLabel="Sačuvaj"
+                  >
+                    <Icon name="checkmark" size={22} color={colors.onPrimary} />
                   </TouchableOpacity>
                 )}
                 {item.status !== "u_toku" && (
-                  <TouchableOpacity style={styles.ne} onPress={() => odbaci(item)}>
-                    <Text style={styles.neText}>✕</Text>
+                  <TouchableOpacity
+                    style={[common.checkCircle, { backgroundColor: colors.surfaceAlt }]}
+                    onPress={() => odbaci(item)}
+                    accessibilityLabel="Odbaci"
+                  >
+                    <Icon name="close" size={22} color={colors.danger} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -176,25 +189,7 @@ export default function PregledScreen() {
 
 const styles = StyleSheet.create({
   card: { flexDirection: "row", alignItems: "center", gap: 12 },
-  ikona: { fontSize: 24 },
-  naziv: { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 2 },
+  naziv: { fontSize: 15, fontFamily: fonts.extrabold, color: colors.textPrimary, marginBottom: 2 },
   dugmad: { flexDirection: "row", gap: 8 },
-  ok: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  okText: { fontSize: 18, fontFamily: fonts.extrabold, color: colors.background },
-  ne: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceAlt,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  neText: { fontSize: 16, fontFamily: fonts.extrabold, color: colors.danger },
+  sveBtn: { marginBottom: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
 });
