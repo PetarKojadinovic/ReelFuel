@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet, RefreshControl } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { getProfile, getWeightSummary, addWeightEntry } from "../../services/api";
+import { getProfile, getWeightSummary, addWeightEntry, getBackups, napraviBackup } from "../../services/api";
 import { getRemindersOn } from "../../services/mealTimes";
 import { getTodayDate } from "../../utils/date";
 import { colors, fonts } from "../../theme";
@@ -14,6 +14,19 @@ const CILJ_LABEL: Record<string, string> = {
   dobijanje_mise: "za dobijanje mišića",
   odrzavanje: "za održavanje",
 };
+
+/** "danas 10:30", "juče 09:12" ili "4. 11. 10:30" */
+function fmtKopija(iso: string | undefined) {
+  if (!iso) return "Nema";
+  const d = new Date(iso);
+  const sat = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const dan = (x: Date) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  const juce = new Date();
+  juce.setDate(juce.getDate() - 1);
+  if (dan(d) === dan(new Date())) return `danas ${sat}`;
+  if (dan(d) === dan(juce)) return `juče ${sat}`;
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${sat}`;
+}
 
 function fmtKg(v: number | null | undefined) {
   return v == null ? "—" : String(Math.round(v * 10) / 10).replace(".", ",");
@@ -28,6 +41,8 @@ export default function JaScreen() {
   const [podsetnici, setPodsetnici] = useState<boolean | null>(null);
   const [unos, setUnos] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [kopija, setKopija] = useState<string | undefined>(undefined);
+  const [pravimKopiju, setPravimKopiju] = useState(false);
 
   const load = useCallback(async () => {
     getRemindersOn().then(setPodsetnici).catch(() => {});
@@ -37,6 +52,9 @@ export default function JaScreen() {
       setProfile(p?.exists ? p : null);
       const s = await getWeightSummary().catch(() => null);
       setTezina(s?.exists ? s : null);
+      getBackups()
+        .then((b) => setKopija(b?.kopije?.[0]?.vreme ?? ""))
+        .catch(() => {});
     } catch {
       setVeza(false);
     } finally {
@@ -67,6 +85,31 @@ export default function JaScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const kopirajPodatke = () => {
+    Alert.alert(
+      "Kopija podataka",
+      "Laptop sam pravi kopiju jednom dnevno i čuva poslednjih 10. Da napravim novu kopiju sada?",
+      [
+        { text: "Ne", style: "cancel" },
+        {
+          text: "Napravi",
+          onPress: async () => {
+            setPravimKopiju(true);
+            try {
+              const k = await napraviBackup();
+              setKopija(k?.vreme);
+              Alert.alert("Kopija podataka", "Sačuvano na laptopu.");
+            } catch {
+              Alert.alert("Greška", "Kopija nije napravljena.");
+            } finally {
+              setPravimKopiju(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -175,6 +218,12 @@ export default function JaScreen() {
         />
         <ListRow icon="stats-chart-outline" title="Nedeljni izveštaj" onPress={() => router.push("/weekly-report")} />
         <ListRow icon="chatbubble-ellipses-outline" title="Pitaj asistenta" onPress={() => router.push("/chat")} />
+        <ListRow
+          icon="save-outline"
+          title="Kopija podataka"
+          value={pravimKopiju ? "Pravim..." : kopija === undefined ? undefined : fmtKopija(kopija)}
+          onPress={veza ? kopirajPodatke : undefined}
+        />
         <ListRow
           icon="wifi-outline"
           title="Veza sa laptopom"

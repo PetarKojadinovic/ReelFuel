@@ -35,7 +35,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 | 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **Nije započeto.** Istraženo: Oracle Always Free (2 OCPU/12 GB posle smanjenja iz juna 2026), Hetzner CX23 (~€4–6/mes), Contabo. Odluka odložena ("prvo automatizacija"). |
 
 ## 4. Backend: rute (prefiksi iz `main.py`)
-`recipe`, `profile`, `mealplan`, `chat`, `log` (food_log), `exercise`, `workoutplan`, `workoutlog`, `weightlog`, `shoppinglist` (generate, generate-from-recipe, get, toggle, delete), `report`, `ingest`, `dan`, `nedelja`, `korekcija`, `plan`, `proizvod` (bar-kod).
+`recipe`, `profile`, `mealplan`, `chat`, `log` (food_log), `exercise`, `workoutplan`, `workoutlog`, `weightlog`, `shoppinglist` (generate, generate-from-recipe, get, toggle, delete), `report`, `ingest`, `dan`, `nedelja`, `korekcija`, `plan`, `proizvod` (bar-kod), `backup`.
 Tačne putanje: Swagger na `/docs` (izvor istine). Sve rute osim eventualno `/docs` idu kroz `verify_api_key`.
 
 Ključni servisi (`backend/app/services/`): `video_downloader` (download_audio/video, fetch_metadata), `transcription`, `recipe_extractor` / `exercise_extractor` (primaju opcioni `caption`), `llm_utils.parse_json`, `ingest_pipeline`, `pose_analysis`, `meal_plan_generator`, `workout_plan_generator`, `shopping_list_generator`, `chat_service`, `daily_nutrition` (`get_dnevni_cilj`), `meal_photo`, `kalorijska_korekcija`, `nedelja_plan`.
@@ -143,6 +143,15 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - Usput: `weekly-report` pokazuje grešku veze umesto "Podesi profil" kad server ne odgovori; `exercise-result` ne puca na loš parametar; `podsetnici` više ne pominje stari "Dnevnik".
 - Provereno: `tsc --noEmit` prolazi, `expo export --platform android` sastavlja bundle. **Na telefonu nije provereno** (ne treba novi build, samo reload).
 - Logo: 5 predloga na https://claude.ai/artifact/MkRYc7ij2GMqHgouBnd5fh (munja, play-list, tanjir, prsten, kap goriva). **Korisnik izabrao 4. predlog (prsten sa slovom R)** (2026-11-06) — još nije pretvoren u PNG ikone niti ubačen u `app.json`.
+- Popravke sa telefona (2026-11-06): panel "+" — polje za težinu se više ne krije iza tastature (`KeyboardAvoidingView behavior="padding"` i na Androidu); Trening/Raspored — serije i ponavljanja idu ispod naziva vežbe (ranije su sa desne strane sabijale naziv u uzanu kolonu). `tsc` prolazi; **na telefonu nije provereno**.
+- **Ikonica aplikacije** (2026-11-06): 4. predlog (prsten kalorija + R). PNG-ovi u `mobile/assets/images/` (`icon`, `android-icon-foreground|background|monochrome`, `splash-icon`, `favicon`) prave se skriptom `scripts/make_icons.py` (Pillow iz backend venv-a, font Nunito Black iz `node_modules`). `app.json`: `name` "ReelFuel" (ranije "mobile"; `slug` ostaje "mobile" zbog EAS projekta), adaptive ikona i splash na pozadini `#111311`. Traži novi EAS build.
+
+## 6k. Kopija baze (2026-11-06)
+- `services/backup.py`: kopija `reelfuel.db` preko sqlite3 backup API-ja (ispravna i dok server radi) u `backend/backups/reelfuel-YYYY-MM-DD_HHMMSS.db`; čuva se poslednjih 10 (`ZADRZI`), starije se brišu. `backups/` je u `backend/.gitignore`.
+- Automatski: pri startu servera (`on_startup`, PRE `init_db`) ako danas još nema kopije. Ručno: `POST /backup/` (napravi), `GET /backup/` (lista, najnovija prva). Vraćanje NIJE preko API-ja.
+- Mobile: tab Ja → red "Kopija podataka" (vreme poslednje kopije; tap → potvrda → nova kopija). Kopija ostaje na laptopu, ne šalje se na telefon ni bilo gde drugde.
+- **Vraćanje kopije (ručno, PowerShell iz `backend`)**: ugasi server, pa `Copy-Item reelfuel.db reelfuel-pre-vracanja.db; Copy-Item backups\<ime>.db reelfuel.db`, pa pokreni server.
+- Provereno: pytest 40/40 (kopija sadrži podatke, rotacija na 10, jednom dnevno); uživo na laptopu `POST`/`GET /backup/` rade, `PRAGMA integrity_check` = ok. `tsc` prolazi. **Red u "Ja" na telefonu nije proveren** (samo reload, ne treba build).
 
 ## 7. Poznati problemi / dug
 Funkcionalni:
@@ -151,7 +160,6 @@ Funkcionalni:
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
-- Nema logoa/ikone aplikacije (podrazumevane Expo ikone); izabran 4. predlog iz 6j (prsten sa R), čeka izradu PNG ikona.
 - Testovi samo za deo backenda (`backend/tests/`); nema mobile testova. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
 
 Bezbednost / operativno:
@@ -161,9 +169,9 @@ Bezbednost / operativno:
 - Pred hosting: HTTP bez TLS-a, deljeni ključ u APK-u, `/docs` dostupan bez ključa, nema rate limita (trošak LLM-a).
 
 ## 8. Roadmap / ideje (po prioritetu)
-1. Logo/ikona aplikacije (izabran 4. predlog iz 6j → PNG ikone + `app.json` → novi EAS build).
+1. Proveriti novu ikonicu i splash na telefonu posle EAS builda.
 2. Podesiti Whisper prag na pravim reelovima.
-3. Backup/export baze — odloženo dok su u bazi samo testni podaci.
+3. ~~Backup baze~~ — urađeno (6k). Export (CSV/JSON) i kopija van laptopa još ne postoje.
 5. Faza 5: hosting (VPS), HTTPS, prava autentikacija (nalozi/JWT), push preko FCM, cron za nedeljni plan.
 7. Ideje: kalendar B (raspored treninga po slobodnim terminima), deljenje liste za kupovinu, export/backup, vreme/vremenski uslovi za trening, Health Connect ako korisnik dobije uređaj.
 

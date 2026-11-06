@@ -6,3 +6,4 @@ reelfuel.db
 downloads/
 models/*.task
 .pytest_cache/
+backups/

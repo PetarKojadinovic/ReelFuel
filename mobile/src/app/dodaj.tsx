@@ -70,7 +70,7 @@ export default function DodajSheet() {
   );
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <Pressable style={styles.overlay} onPress={zatvori} accessibilityLabel="Zatvori">
         <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]} onPress={() => {}}>
           <View style={styles.handle} />
