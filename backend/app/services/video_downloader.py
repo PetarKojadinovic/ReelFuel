@@ -1,4 +1,5 @@
 import yt_dlp
+import glob
 import os
 import uuid
 import subprocess
@@ -64,8 +65,15 @@ def download_audio(url: str) -> str:
         }],
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except Exception:
+        # Reel bez audio trake (npr. muzika skinuta zbog autorskih prava): yt-dlp skine
+        # ceo video pa padne na FFmpeg koraku -> obrisi ostatke da ne pune disk.
+        for ostatak in glob.glob(os.path.join(DOWNLOAD_DIR, f"{file_id}.*")):
+            os.remove(ostatak)
+        raise
 
     final_path = os.path.join(DOWNLOAD_DIR, f"{file_id}.mp3")
     return _mora_postojati(final_path)
