@@ -1,9 +1,10 @@
 import logging
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import date
 
 from app.models.database import SessionLocal, MealPlan
+from app.services.daily_nutrition import week_start
 
 log = logging.getLogger("nedelja")
 _lock = threading.Lock()
@@ -11,15 +12,24 @@ _state = {"running": False, "last_fail": 0.0}
 RETRY_SECONDS = 30 * 60
 
 
-def _week_start(d):
-    return d - timedelta(days=d.weekday())
-
-
-def plan_is_current(db) -> bool:
+def plan_is_current(db, danas: date | None = None) -> bool:
+    """Da li najnoviji jelovnik pokriva tekuću nedelju (po lokalnom datumu, kao /mealplan/generate)."""
     last = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
-    if not last or not last.created_at:
+    if not last:
         return False
-    return _week_start(last.created_at.date()) >= _week_start(datetime.utcnow().date())
+    od = (last.plan_data or {}).get("nedelja_od")
+    if od:
+        try:
+            nedelja = date.fromisoformat(od)
+        except ValueError:
+            nedelja = None
+    else:
+        nedelja = None
+    if nedelja is None:
+        if not last.created_at:
+            return False
+        nedelja = week_start(last.created_at.date())
+    return nedelja >= week_start(danas or date.today())
 
 
 def current_status(db) -> str:
