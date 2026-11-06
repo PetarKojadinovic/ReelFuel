@@ -1,61 +1,35 @@
-import { View, Text, StyleSheet } from "react-native";
+import { ScrollView, View, Text } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, DetailHeader, StatCard } from "../components/ui";
 
 export default function ExerciseResultScreen() {
   const { exercise: exerciseParam } = useLocalSearchParams();
-  const exercise = JSON.parse(exerciseParam as string);
+
+  let exercise: any = {};
+  try {
+    exercise = JSON.parse(exerciseParam as string) || {};
+  } catch {
+    exercise = {};
+  }
 
   return (
-    <View style={[common.container, { padding: 20 }]}>
-      <View style={styles.iconWrap}>
-        <Text style={styles.icon}>💪</Text>
+    <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+      <DetailHeader icon="barbell-outline" eyebrow="Vežba" title={exercise.naziv_vezbe || "Nepoznata vežba"} />
+
+      <View style={common.row}>
+        <StatCard label="Serije i ponavljanja" value={exercise.serije_i_ponavljanja || "—"} />
+        {exercise.detektovano_ponavljanja != null ? (
+          <StatCard label="Izbrojano (AI)" value={exercise.detektovano_ponavljanja} />
+        ) : null}
       </View>
 
-      <Text style={[typography.title, { marginBottom: 12 }]}>
-        {exercise.naziv_vezbe || "Nepoznata vežba"}
-      </Text>
-
-      <View style={styles.tagsRow}>
-        {exercise.grupa_misica && (
-          <View style={common.badge}>
-            <Text style={common.badgeText}>{exercise.grupa_misica}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.statsRow}>
-        <View style={[common.card, styles.statCard]}>
-          <Text style={typography.bodySecondary}>Serije/ponavljanja</Text>
-          <Text style={styles.statValue}>{exercise.serije_i_ponavljanja || "—"}</Text>
-        </View>
-        {exercise.detektovano_ponavljanja != null && (
-          <View style={[common.card, styles.statCard]}>
-            <Text style={typography.bodySecondary}>Detektovano (AI)</Text>
-            <Text style={styles.statValue}>{exercise.detektovano_ponavljanja}</Text>
-          </View>
-        )}
-      </View>
-    </View>
+      {exercise.grupa_misica ? (
+        <Card>
+          <Text style={typography.bodySecondary}>Grupa mišića</Text>
+          <Text style={typography.bodyStrong}>{exercise.grupa_misica}</Text>
+        </Card>
+      ) : null}
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  icon: { fontSize: 32 },
-  tagsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
-  statsRow: { flexDirection: "row", gap: 12 },
-  statCard: { flex: 1, marginBottom: 0 },
-  statValue: { fontSize: 20, fontFamily: fonts.extrabold, color: colors.textPrimary, marginTop: 4 },
-});

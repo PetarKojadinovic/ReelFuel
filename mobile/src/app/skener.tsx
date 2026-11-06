@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { requireOptionalNativeModule } from "expo";
 import type * as CameraT from "expo-camera";
@@ -9,6 +9,7 @@ import { getProizvod, procitajEtiketu, danAkcija, addLogEntry, type Proizvod } f
 import { getTodayDate } from "../utils/date";
 import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, Message, TextButton } from "../components/ui";
 
 type Faza = "skeniram" | "trazim" | "nadjen" | "nije_nadjen" | "citam";
 
@@ -32,19 +33,15 @@ const Kamera: typeof CameraT | null = kameraDostupna ? require("expo-camera") : 
 
 export default function SkenerScreen() {
   if (Platform.OS === "web") {
-    return (
-      <View style={[common.centered, { padding: 24 }]}>
-        <Text style={[typography.body, { textAlign: "center" }]}>Skeniranje bar-koda radi samo u aplikaciji na telefonu.</Text>
-      </View>
-    );
+    return <Message icon="phone-portrait-outline" text="Skeniranje bar-koda radi samo u aplikaciji na telefonu." />;
   }
   if (!Kamera) {
     return (
-      <View style={[common.centered, { padding: 24 }]}>
-        <Text style={[typography.body, { textAlign: "center" }]}>
-          Za skeniranje treba nova verzija aplikacije (novi development build). Instaliraj novi APK pa probaj ponovo.
-        </Text>
-      </View>
+      <Message
+        icon="download-outline"
+        title="Treba nova verzija"
+        text="Za skeniranje treba novi development build. Instaliraj novi APK pa probaj ponovo."
+      />
     );
   }
   return <Skener kamera={Kamera} />;
@@ -161,23 +158,17 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
   // ---------- prikazi ----------
 
   if (!permission) {
-    return (
-      <View style={common.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <Message loading />;
   }
 
   if (!permission.granted) {
     return (
-      <View style={[common.centered, { padding: 24 }]}>
-        <Text style={[typography.body, { textAlign: "center", marginBottom: 20 }]}>
-          Za skeniranje bar-koda treba dozvola za kameru.
-        </Text>
-        <TouchableOpacity style={[common.primaryButton, { alignSelf: "stretch" }]} onPress={requestPermission}>
-          <Text style={common.primaryButtonText}>Dozvoli kameru</Text>
-        </TouchableOpacity>
-      </View>
+      <Message
+        icon="camera-outline"
+        text="Za skeniranje bar-koda treba dozvola za kameru."
+        action="Dozvoli kameru"
+        onAction={requestPermission}
+      />
     );
   }
 
@@ -193,8 +184,11 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
         <View style={styles.okvir} pointerEvents="none" />
         <View style={styles.uputstvo}>
           <Text style={styles.uputstvoText}>Usmeri kameru na bar-kod sa pakovanja</Text>
-          <TouchableOpacity onPress={() => router.replace({ pathname: "/zamena", params: { datum, obrok_tip: obrokTip } })}>
-            <Text style={[styles.uputstvoText, { textDecorationLine: "underline", marginTop: 10 }]}>Unesi ručno</Text>
+          <TouchableOpacity
+            style={[common.secondaryButton, { marginTop: 14, alignSelf: "center" }]}
+            onPress={() => router.replace({ pathname: "/zamena", params: { datum, obrok_tip: obrokTip } })}
+          >
+            <Text style={common.secondaryButtonText}>Unesi ručno</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -202,20 +196,13 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
   }
 
   if (faza === "trazim" || faza === "citam") {
-    return (
-      <View style={common.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[typography.bodySecondary, { marginTop: 16 }]}>
-          {faza === "trazim" ? "Tražim proizvod..." : "Čitam tabelu sa slike..."}
-        </Text>
-      </View>
-    );
+    return <Message loading text={faza === "trazim" ? "Tražim proizvod..." : "Čitam tabelu sa slike..."} />;
   }
 
   if (faza === "nije_nadjen") {
     return (
-      <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
-        <Text style={[typography.title, { marginBottom: 8 }]}>Proizvod nije u bazi</Text>
+      <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+        <Text style={[typography.title, { fontSize: 26, marginBottom: 8 }]}>Proizvod nije u bazi</Text>
         <Text style={[typography.bodySecondary, { marginBottom: 20 }]}>
           Bar-kod {barkod}. Slikaj tabelu nutritivnih vrednosti sa pakovanja, a ja ću pročitati kalorije i zapamtiti
           proizvod za sledeći put.
@@ -237,9 +224,7 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
         >
           <Text style={common.secondaryButtonText}>Unesi ručno</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={skenirajPonovo}>
-          <Text style={typography.bodySecondary}>Skeniraj ponovo</Text>
-        </TouchableOpacity>
+        <TextButton title="Skeniraj ponovo" onPress={skenirajPonovo} />
       </ScrollView>
     );
   }
@@ -251,26 +236,26 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
   if (proizvod?.paket_g) opcije.push({ label: `Ceo paket (${Math.round(proizvod.paket_g)} g)`, g: proizvod.paket_g });
 
   return (
-    <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
-      <View style={common.card}>
-        <Text style={[typography.body, { fontFamily: fonts.extrabold, fontSize: 18 }]}>{proizvod?.naziv}</Text>
+    <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+      <Card>
+        <Text style={typography.heading}>{proizvod?.naziv}</Text>
         <Text style={[typography.bodySecondary, { marginTop: 4 }]}>
           {proizvod?.kcal_100g} kcal{proizvod?.proteini_100g != null ? ` · ${proizvod.proteini_100g} g proteina` : ""} / 100 g ·{" "}
           {proizvod?.izvor === "etiketa" ? "pročitano sa pakovanja" : "Open Food Facts"}
         </Text>
-      </View>
+      </Card>
 
       <Text style={typography.label}>Koliko si pojeo?</Text>
-      <View style={styles.opcije}>
+      <View style={common.chipRow}>
         {opcije.map((o) => {
           const active = Math.round(g) === Math.round(o.g);
           return (
             <TouchableOpacity
               key={o.label}
-              style={[styles.opcija, active && styles.opcijaActive]}
+              style={[common.chip, active && common.chipActive]}
               onPress={() => setGrami(String(Math.round(o.g)))}
             >
-              <Text style={[styles.opcijaText, active && styles.opcijaTextActive]}>{o.label}</Text>
+              <Text style={[common.chipText, active && common.chipTextActive]}>{o.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -279,21 +264,19 @@ function Skener({ kamera }: { kamera: typeof CameraT }) {
       <Text style={typography.label}>Grama</Text>
       <TextInput style={common.input} value={grami} onChangeText={setGrami} keyboardType="numeric" />
 
-      <View style={[common.card, { alignItems: "center", marginTop: 8 }]}>
-        <Text style={styles.kcal}>{kcal ?? "—"} kcal</Text>
+      <Card style={{ alignItems: "center", marginTop: 8 }}>
+        <Text style={typography.bigNumber}>{kcal ?? "—"} kcal</Text>
         {proteini != null && <Text style={[typography.bodyStrong, { marginBottom: 4 }]}>{proteini} g proteina</Text>}
         <Text style={typography.bodySecondary}>
           {obrokTip ? "upisaće se umesto planiranog obroka" : "dodaje se u današnji dnevnik"}
         </Text>
-      </View>
+      </Card>
 
       <TouchableOpacity style={[common.primaryButton, { marginTop: 16 }]} onPress={sacuvaj} disabled={saving}>
         <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Upiši u dnevnik"}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={{ marginTop: 16, alignItems: "center" }} onPress={skenirajPonovo}>
-        <Text style={typography.bodySecondary}>Skeniraj drugi proizvod</Text>
-      </TouchableOpacity>
-      <Text style={styles.napomena}>
+      <TextButton title="Skeniraj drugi proizvod" onPress={skenirajPonovo} />
+      <Text style={[typography.note, { marginTop: 16 }]}>
         Kalorije su sa pakovanja ili iz otvorene baze Open Food Facts i mogu se razlikovati od stvarnih.
       </Text>
     </ScrollView>
@@ -320,18 +303,4 @@ const styles = StyleSheet.create({
     textShadowColor: "#000",
     textShadowRadius: 6,
   },
-  opcije: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  opcija: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  opcijaActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  opcijaText: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.bold },
-  opcijaTextActive: { color: colors.background },
-  kcal: { fontSize: 30, fontFamily: fonts.extrabold, color: colors.primary },
-  napomena: { fontSize: 12, color: colors.textSecondary, marginTop: 20, lineHeight: 18 },
 });

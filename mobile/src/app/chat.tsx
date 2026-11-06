@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Markdown from "react-native-markdown-display";
+import { Icon } from "../components/ui";
 import {
   View,
   Text,
@@ -106,9 +107,9 @@ export default function ChatScreen() {
         />
         <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={sending}>
           {sending ? (
-            <ActivityIndicator size="small" color="#141414" />
+            <ActivityIndicator size="small" color={colors.onPrimary} />
           ) : (
-            <Text style={styles.sendButtonText}>➤</Text>
+            <Icon name="send" size={20} color={colors.onPrimary} />
           )}
         </TouchableOpacity>
       </View>
@@ -155,7 +156,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sendButtonText: { color: "#141414", fontSize: 18, fontFamily: fonts.bold },
 });
 
 const markdownStyles = {

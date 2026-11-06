@@ -1,152 +1,74 @@
 # ReelFuel
 
-Mobilna aplikacija koja pretvara TikTok/Instagram Reels linkove u strukturirane recepte i vežbe, i generiše personalizovan nedeljni plan ishrane pomoću AI-ja.
+Lična mobilna aplikacija za ishranu i trening. Podeliš (Share) TikTok/Instagram reel → backend ga skine, transkribuje i AI izvuče **recept** ili **vežbu** → ulazi u biblioteku, plan ishrane, plan treninga i dnevnik.
+
+Princip: **automation-first** — što manje kucanja. Plan je podrazumevani dnevnik ("Pojeo sam"), podsetnici u vreme obroka, kalorije iz slike, glasa ili bar-koda, automatski nedeljni plan.
 
 ## Tech stack
-
-- **Mobile**: React Native (Expo), Expo Router, TypeScript
-- **Backend**: Python, FastAPI, SQLite (SQLAlchemy)
-- **AI/ML**: Claude Haiku 4.5 (Anthropic API), Whisper (transkripcija govora), MediaPipe (analiza pokreta)
-- **Preuzimanje videa**: yt-dlp, FFmpeg
-
----
+- **Mobile**: Expo SDK 57, Expo Router, React Native, TypeScript (EAS development build, ne Expo Go)
+- **Backend**: Python 3.13, FastAPI, SQLAlchemy + SQLite
+- **AI/ML**: Claude Haiku 4.5 (Anthropic API, tool calling), Whisper (lokalno), MediaPipe Pose
+- **Preuzimanje**: yt-dlp + FFmpeg (samo Instagram/TikTok, allowlist)
 
 ## Funkcionalnosti
+- **Unos iz reela**: share-intent ili link iz clipboard-a → automatska klasifikacija recept/vežba → "Spremno za pregled".
+- **Danas**: krug kalorija + traka proteina, obroci iz plana ("Pojeo sam" / "Nešto drugo" / "Preskočio sam"), današnji trening.
+- **Unos obroka**: slika obroka, glas ("pojeo sam dva jaja i hleb"), bar-kod (Open Food Facts + čitanje etikete), ručno.
+- **Hrana**: nedeljni jelovnik po datumima (AI), recepti, lista za kupovinu (iz plana ili recepta).
+- **Trening**: raspored (teretana / napolju), moje vežbe, upis treninga u Google kalendar.
+- **Ja**: profil i ciljevi, praćenje težine sa grafikonom, nedeljni izveštaj, predlozi korekcije kalorijskog cilja, podsetnici, chat asistent.
 
-### 1. Recepti sa TikTok/Instagram linka
-- Korisnik nalepi link → backend preuzima audio → Whisper transkribuje govor → Claude strukturira transkript u JSON recept (naziv, sastojci, koraci, kalorije)
-- Recept se automatski čuva u bazu
-- Ekran **"Moji Recepti"**: lista svih sačuvanih recepata, brisanje, i ručno dodavanje recepta (bez linka)
+Kalorijski cilj: Mifflin-St Jeor + aktivnost + cilj + prihvaćene korekcije. Cilj proteina po g/kg prema cilju.
 
-### 2. Profil korisnika
-- Unos težine, visine, godina, pola, nivoa aktivnosti, cilja (mršavljenje/dobijanje mišića/održavanje)
-- Podesiva preferenca raspodele kalorija po obrocima (npr. "najviše jedem uveče")
-- Automatski izračunat BMR, TDEE, i dnevni cilj kalorija (Mifflin-St Jeor formula)
-
-### 3. AI nedeljni plan ishrane
-- Generiše 7 dana sa po 3 obroka (doručak, ručak, večera)
-- Kombinuje korisnikove sačuvane recepte sa novim AI predlozima
-- Raspodela kalorija po obrocima prati korisnikovu preferencu iz profila
-- Minimalno ponavljanje obroka tokom nedelje
-
-### 4. Chat asistent
-- Razgovor sa AI o profilu, planu, i receptima
-- Model koristi "tool calling" da po potrebi:
-  - Izmeni profil (težinu, cilj, itd.)
-  - Zameni obrok u trenutnom nedeljnom planu
-  - Doda novi recept na osnovu opisa u chatu
-- Istorija razgovora se trajno čuva
-
-### 5. Dnevnik ishrane
-- Praćenje šta je korisnik stvarno pojeo tog dana
-- Dva načina unosa: čekiranje obroka direktno iz nedeljnog plana, ili slobodan ručni unos
-- Prikaz ukupno unetih kalorija naspram dnevnog cilja
-
-### 6. Vežbe sa TikTok/Instagram linka (u razvoju)
-- Preuzima se ceo video (ne samo audio)
-- Whisper transkribuje govor (ako video ima audio)
-- MediaPipe analizira pokret tela (prati vertikalni pokret kukova) i procenjuje broj ponavljanja
-- Claude kombinuje transkript + analizu pokreta u strukturiran opis vežbe (naziv, grupa mišića, serije/ponavljanja)
-- **Poznato ograničenje**: neki Instagram Reels-ovi (verovatno oni sa licenciranom muzikom) ne izlažu audio track za preuzimanje — u tom slučaju se koristi samo analiza pokreta, bez transkripta
-
----
-
-## Struktura projekta
-
+## Struktura
 ```
 ReelFuel/
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/routes/
-│   │   │   ├── recipe.py       # recepti - obrada linka, lista, brisanje, rucno dodavanje
-│   │   │   ├── profile.py      # profil korisnika + kalorijski cilj
-│   │   │   ├── meal_plan.py    # generisanje nedeljnog plana
-│   │   │   ├── chat.py         # chat asistent sa tool calling
-│   │   │   ├── food_log.py     # dnevnik unetih obroka
-│   │   │   └── exercise.py     # vezbe - obrada linka, lista, brisanje
-│   │   ├── services/
-│   │   │   ├── video_downloader.py      # yt-dlp (audio i video preuzimanje)
-│   │   │   ├── transcription.py         # Whisper
-│   │   │   ├── recipe_extractor.py      # Claude - recept iz transkripta
-│   │   │   ├── exercise_extractor.py    # Claude - vezba iz transkripta + pokreta
-│   │   │   ├── pose_analysis.py         # MediaPipe - analiza pokreta
-│   │   │   ├── meal_plan_generator.py   # Claude - nedeljni plan
-│   │   │   └── chat_service.py          # Claude - chat sa tool calling
-│   │   └── models/
-│   │       └── database.py     # SQLAlchemy modeli (Recipe, UserProfile, MealPlan, ChatMessage, FoodLogEntry, Exercise)
-│   ├── models/
-│   │   └── pose_landmarker.task   # MediaPipe model fajl
-│   ├── requirements.txt
-│   └── .env                    # ANTHROPIC_API_KEY
-│
-└── mobile/
-    └── src/
-        ├── app/                 # Expo Router ekrani
-        │   ├── index.tsx        # Home
-        │   ├── recipe-input.tsx
-        │   ├── recipe-result.tsx
-        │   ├── recipe-manual.tsx
-        │   ├── recipes.tsx      # lista recepata
-        │   ├── profile-input.tsx
-        │   ├── meal-plan.tsx
-        │   ├── chat.tsx
-        │   ├── dnevnik.tsx
-        │   └── _layout.tsx
-        ├── services/
-        │   └── api.ts           # svi pozivi ka backend-u
-        ├── utils/
-        │   └── date.ts
-        └── theme.ts              # dark mode paleta boja
+├─ start.bat / start.ps1     # jedan klik: backend + Expo
+├─ AGENTS.md                 # pravila za AI agente
+├─ CONTEXT.md                # detaljno stanje projekta, rute, poznati problemi
+├─ backend/                  # FastAPI
+│  ├─ app/main.py            # routeri, API ključ, CORS, init_db
+│  ├─ app/api/routes/        # HTTP slojevi
+│  ├─ app/services/          # logika (LLM, download, whisper, planovi...)
+│  ├─ app/models/database.py # SQLAlchemy modeli
+│  └─ tests/                 # pytest
+└─ mobile/                   # Expo aplikacija
+   └─ src/
+      ├─ app/                # ekrani; (tabs)/ = Danas, Hrana, +, Trening, Ja
+      ├─ components/         # ui.tsx, hrana/, trening/, ...
+      ├─ services/           # api.ts, apiConfig.ts, notifications.ts...
+      ├─ styles/common.ts
+      └─ theme.ts
 ```
-
----
 
 ## Pokretanje
+**Najlakše**: dupli klik na `start.bat`. Pokrene backend i Expo i ispiše adresu za telefon.
 
-### Backend
-
-```
+Ručno (PowerShell):
+```powershell
+# Backend
 cd backend
-venv\Scripts\activate
-uvicorn app.main:app --reload --host 0.0.0.0
-```
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --host 0.0.0.0    # Swagger: http://localhost:8000/docs
+python -m pytest -q                              # testovi (requirements-dev.txt)
 
-Swagger dokumentacija (za testiranje ruta): `http://127.0.0.1:8000/docs`
-
-### Mobile
-
-```
+# Mobile
 cd mobile
-npx expo start
+npx expo start -c
+npx tsc --noEmit
+eas build --profile development --platform android   # posle izmene native dela
 ```
 
-Pritisni `w` za web verziju (preporučeno za sada, dok se ne reši konekcija na fizičkom telefonu), ili skeniraj QR kod sa Expo Go aplikacijom.
+Env fajlovi (nikad u git, samo `.env.example`):
+- `backend/.env`: `ANTHROPIC_API_KEY`, `APP_SECRET_KEY` (najmanje 16 znakova)
+- `mobile/.env`: `EXPO_PUBLIC_API_KEY` (ista vrednost kao `APP_SECRET_KEY`), `EXPO_PUBLIC_API_URL` (rezerva; aplikacija sama nalazi laptop)
 
-**Napomena**: konekcija sa fizičkog telefona ka lokalnom backend serveru trenutno ne radi pouzdano (verovatno zbog Windows Firewall-a ili 360 Total Security antivirusa) — testiranje se za sada radi kroz web verziju.
+Telefon i laptop moraju biti na istoj mreži. Server radi lokalno, nije na internetu.
 
----
+## Ograničenja
+- Jedan korisnik, deljeni `X-API-Key` (nije prava autentikacija). Hosting, HTTPS i nalozi su planirani.
+- Neki Instagram reelovi nemaju audio → koristi se opis (caption).
+- Whisper ponekad izmišlja tekst na muzici/tišini; sumnjivi segmenti se odbacuju.
 
-## Poznati problemi / za rešiti
-
-1. **Fizički telefon ne može da se poveže na lokalni backend** — sumnja se na Windows Firewall ili 360 Total Security blokiranje konekcije. Web verzija radi bez problema (posle dodavanja CORS middleware-a).
-2. **Neki Instagram Reels-ovi nemaju dostupan audio track** za preuzimanje (verovatno zbog licencirane muzike) — kod sada gracefully hendluje ovaj slučaj tako što nastavlja samo sa analizom pokreta.
-3. **MediaPipe brojanje ponavljanja** je heuristika bazirana na vertikalnom pokretu kukova — dobro radi za čučnjeve/sklekove/mrtvo dizanje, manje precizno za vežbe bez tog pokreta (npr. biceps pregib u stojećem stavu).
-
----
-
-## Troškovi (za ličnu upotrebu)
-
-- **Whisper i MediaPipe**: rade lokalno, besplatno
-- **Claude Haiku 4.5 API**: ~$0.003-0.004 po obradi recepta/vežbe; $5 kredita pokriva otprilike 1300+ obrada
-- **Hosting**: trenutno lokalno, bez troškova
-
----
-
-## Sledeći koraci (predlog)
-
-- Rešiti konekciju fizičkog telefona (Windows Firewall / antivirus podešavanja)
-- Povezati vežbe sa nedeljnim planom treninga (analogno nedeljnom planu ishrane)
-- Praćenje odrađenih vežbi (analogno dnevniku ishrane)
-- Poboljšati preciznost brojanja ponavljanja (dodati praćenje drugih zglobova, ne samo kukova)
-- Testirati i doraditi generisanje plana na osnovu stvarne upotrebe
+## Troškovi
+Whisper i MediaPipe rade lokalno (besplatno). Claude Haiku: oko $0.003–0.004 po obradi reela.

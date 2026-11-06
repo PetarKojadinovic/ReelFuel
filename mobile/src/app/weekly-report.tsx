@@ -1,13 +1,59 @@
 import { useState, useCallback } from "react";
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { getWeeklyReport } from "../services/api";
 import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, IconTile, Message, type IconName } from "../components/ui";
+
+function Kartica({
+  icon,
+  broj,
+  od,
+  opis,
+  poruka,
+  napomena,
+}: {
+  icon: IconName;
+  broj: string | number;
+  od?: string;
+  opis: string;
+  poruka?: string;
+  napomena?: string;
+}) {
+  return (
+    <Card style={styles.card}>
+      <View style={styles.cardTop}>
+        <IconTile icon={icon} />
+        <View style={{ flex: 1 }}>
+          <Text style={typography.bigNumber}>
+            {broj}
+            {od ? <Text style={styles.od}>{od}</Text> : null}
+          </Text>
+          <Text style={typography.bodySecondary}>{opis}</Text>
+        </View>
+      </View>
+      {poruka ? <Text style={[typography.bodyStrong, { marginTop: 12 }]}>{poruka}</Text> : null}
+      {napomena ? <Text style={[typography.note, { marginTop: 8 }]}>{napomena}</Text> : null}
+    </Card>
+  );
+}
 
 export default function WeeklyReportScreen() {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [greska, setGreska] = useState(false);
+
+  const load = async () => {
+    setGreska(false);
+    try {
+      setReport(await getWeeklyReport());
+    } catch {
+      setGreska(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -15,30 +61,33 @@ export default function WeeklyReportScreen() {
     }, [])
   );
 
-  const load = async () => {
-    try {
-      const data = await getWeeklyReport();
-      setReport(data);
-    } catch (err) {
-      // tiho
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return <Message loading />;
 
-  if (loading) {
+  if (greska) {
     return (
-      <View style={common.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Message
+        icon="cloud-offline-outline"
+        iconColor={colors.warning}
+        title="Ne mogu da dođem do laptopa"
+        text="Proveri da li je backend pokrenut i da si na istoj mreži."
+        action="Pokušaj ponovo"
+        onAction={() => {
+          setLoading(true);
+          load();
+        }}
+      />
     );
   }
 
   if (!report?.exists) {
     return (
-      <View style={[common.centered, { padding: 20 }]}>
-        <Text style={common.emptyText}>Podesi profil da vidiš nedeljni izveštaj.</Text>
-      </View>
+      <Message
+        icon="person-outline"
+        title="Još nema izveštaja"
+        text="Unesi svoje podatke i cilj da bih mogao da pratim nedelju."
+        action="Moji podaci"
+        onAction={() => router.push("/moji-podaci")}
+      />
     );
   }
 
@@ -46,80 +95,61 @@ export default function WeeklyReportScreen() {
 
   const ishranaMsg =
     ishrana.dani_pogodjen_cilj >= 5
-      ? "Odlična nedelja! 🔥"
+      ? "Odlična nedelja!"
       : ishrana.dani_pogodjen_cilj >= 3
-      ? "Solidno, ima prostora za bolje 💪"
-      : "Sledeće nedelje možeš bolje 🎯";
+      ? "Solidno, ima prostora za bolje."
+      : "Sledeće nedelje možeš bolje.";
 
   const treningMsg =
-    trening.odradjeno_dana >= trening.planirano_dana
-      ? "Ispunio si plan treninga! 🏆"
-      : `Odradio ${trening.odradjeno_dana}/${trening.planirano_dana} treninga`;
+    trening.odradjeno_dana >= trening.planirano_dana ? "Ispunio si plan treninga!" : "Još malo do punog plana.";
 
   return (
-    <ScrollView style={common.container} contentContainerStyle={{ padding: 20, paddingTop: 20 }}>
-      <Text style={typography.title}>Nedeljni Izveštaj</Text>
-      <Text style={[typography.bodySecondary, { marginBottom: 20 }]}>
+    <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+      <Text style={[typography.eyebrow, { marginBottom: 12 }]}>
         {period.od} — {period.do}
       </Text>
 
-      <View style={[common.card, styles.card]}>
-        <Text style={styles.cardIcon}>🍽️</Text>
-        <Text style={styles.cardBigNumber}>
-          {ishrana.dani_pogodjen_cilj}
-          <Text style={styles.cardBigNumberMuted}>/7</Text>
-        </Text>
-        <Text style={[typography.bodySecondary, { marginTop: 4, marginBottom: 10 }]}>
-          dana si pogodio kalorijski cilj
-        </Text>
-        <Text style={styles.cardMotivation}>{ishranaMsg}</Text>
-        {ishrana.dani_sa_unosom < 7 && (
-          <Text style={styles.cardNote}>
-            Uneo si podatke {ishrana.dani_sa_unosom}/7 dana — unesi svaki dan za precizniji izveštaj.
-          </Text>
-        )}
-      </View>
+      <Kartica
+        icon="restaurant-outline"
+        broj={ishrana.dani_pogodjen_cilj}
+        od="/7"
+        opis="dana si pogodio kalorijski cilj"
+        poruka={ishranaMsg}
+        napomena={
+          ishrana.dani_sa_unosom < 7
+            ? `Uneo si podatke ${ishrana.dani_sa_unosom}/7 dana — unesi svaki dan za precizniji izveštaj.`
+            : undefined
+        }
+      />
 
-      <View style={[common.card, styles.card]}>
-        <Text style={styles.cardIcon}>🏋️</Text>
-        <Text style={styles.cardBigNumber}>
-          {trening.odradjeno_dana}
-          <Text style={styles.cardBigNumberMuted}>/{trening.planirano_dana}</Text>
-        </Text>
-        <Text style={[typography.bodySecondary, { marginTop: 4, marginBottom: 10 }]}>treninga odrađeno</Text>
-        <Text style={styles.cardMotivation}>{treningMsg}</Text>
-      </View>
+      <Kartica
+        icon="barbell-outline"
+        broj={trening.odradjeno_dana}
+        od={`/${trening.planirano_dana}`}
+        opis="treninga odrađeno"
+        poruka={treningMsg}
+      />
 
-      <View style={[common.card, styles.card]}>
-        <Text style={styles.cardIcon}>⚖️</Text>
-        {tezina.promena_kg !== null ? (
-          <>
-            <Text style={styles.cardBigNumber}>
-              {tezina.promena_kg > 0 ? "+" : ""}
-              {tezina.promena_kg}
-              <Text style={styles.cardBigNumberMuted}> kg</Text>
-            </Text>
-            <Text style={[typography.bodySecondary, { marginTop: 4, marginBottom: 10 }]}>
-              promena težine ove nedelje
-            </Text>
-            <Text style={styles.cardMotivation}>
-              {tezina.pocetna}kg → {tezina.trenutna}kg
-              {tezina.ciljna ? ` (cilj: ${tezina.ciljna}kg)` : ""}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.cardNote}>Nema dovoljno unosa težine za trend ove nedelje.</Text>
-        )}
-      </View>
+      {tezina.promena_kg !== null ? (
+        <Kartica
+          icon="scale-outline"
+          broj={`${tezina.promena_kg > 0 ? "+" : ""}${tezina.promena_kg}`}
+          od=" kg"
+          opis="promena težine ove nedelje"
+          poruka={`${tezina.pocetna} kg → ${tezina.trenutna} kg${tezina.ciljna ? ` (cilj: ${tezina.ciljna} kg)` : ""}`}
+        />
+      ) : (
+        <Card style={[styles.card, styles.cardTop]}>
+          <IconTile icon="scale-outline" color={colors.textSecondary} />
+          <Text style={[typography.bodySecondary, { flex: 1 }]}>Nema dovoljno unosa težine za trend ove nedelje.</Text>
+        </Card>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 20 },
-  cardIcon: { fontSize: 24, marginBottom: 8 },
-  cardBigNumber: { fontSize: 34, fontFamily: fonts.extrabold, color: colors.primary },
-  cardBigNumberMuted: { fontSize: 18, color: colors.textSecondary, fontFamily: fonts.semibold },
-  cardMotivation: { fontSize: 15, color: colors.textPrimary, fontFamily: fonts.semibold },
-  cardNote: { fontSize: 12, color: colors.textSecondary, marginTop: 8, lineHeight: 18 },
+  card: { padding: 18 },
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 14 },
+  od: { fontSize: 18, fontFamily: fonts.bold, color: colors.textSecondary },
 });

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Switch, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Switch, Alert, ScrollView, StyleSheet } from "react-native";
 import { colors } from "../theme";
 import { common, typography } from "../styles/common";
+import { Card, Icon, type IconName } from "../components/ui";
 import { getMealTimes, setMealTimes, getRemindersOn, setRemindersOn, isValidHM } from "../services/mealTimes";
 import { scheduleMealReminders, sendTestNotification, describeScheduled } from "../services/notifications";
 
@@ -35,7 +36,7 @@ export default function PodsetniciScreen() {
       if (on && count === 0) {
         Alert.alert(
           "Podsetnici nisu zakazani",
-          "Proveri da li si dozvolio notifikacije i da li imaš generisan nedeljni plan ishrane."
+          "Proveri da li si dozvolio notifikacije i da li imaš napravljen jelovnik za ovu nedelju."
         );
       } else {
         Alert.alert("Sačuvano", on ? `Zakazano podsetnika: ${count}` : "Podsetnici su isključeni.");
@@ -69,26 +70,45 @@ export default function PodsetniciScreen() {
     }
   };
 
+  const obroci: { icon: IconName; label: string; value: string; set: (v: string) => void; placeholder: string }[] = [
+    { icon: "sunny-outline", label: "Doručak", value: dorucak, set: setDorucak, placeholder: "08:00" },
+    { icon: "restaurant-outline", label: "Ručak", value: rucak, set: setRucak, placeholder: "13:00" },
+    { icon: "moon-outline", label: "Večera", value: vecera, set: setVecera, placeholder: "19:00" },
+  ];
+
   return (
-    <ScrollView style={common.container} contentContainerStyle={{ padding: 20 }}>
-      <View style={[common.rowBetween, { marginBottom: 8 }]}>
-        <Text style={typography.title}>Podsetnici</Text>
-        <Switch value={on} onValueChange={setOn} trackColor={{ true: colors.primary }} />
-      </View>
+    <ScrollView style={common.container} contentContainerStyle={common.stackPadding}>
+      <Card style={styles.switchRow}>
+        <Icon name="notifications-outline" />
+        <Text style={[typography.bodyStrong, { flex: 1 }]}>Podsetnici za obroke</Text>
+        <Switch value={on} onValueChange={setOn} trackColor={{ true: colors.primary, false: colors.surfaceAlt }} thumbColor={colors.textPrimary} />
+      </Card>
       <Text style={[typography.bodySecondary, { marginBottom: 16, lineHeight: 20 }]}>
-        Upiši kad obično jedeš. U to vreme stiže podsetnik da slikaš obrok ili uneseš kalorije (ili da potvrdiš obrok
-        po planu, ili preskočiš). Ako ne odgovoriš, obrok iz plana se posle 2 sata računa kao pretpostavljen (procena)
-        i možeš ga ispraviti u Dnevniku.
+        U vreme obroka stiže podsetnik: slikaj obrok, potvrdi da si jeo po planu ili preskoči. Ako ne odgovoriš, obrok iz
+        plana se posle 2 sata računa kao procena i možeš ga ispraviti na ekranu Danas.
       </Text>
 
-      <Text style={typography.label}>Doručak (HH:MM)</Text>
-      <TextInput style={common.input} value={dorucak} onChangeText={setDorucak} placeholder="08:00" placeholderTextColor={colors.textSecondary} />
-      <Text style={typography.label}>Ručak (HH:MM)</Text>
-      <TextInput style={common.input} value={rucak} onChangeText={setRucak} placeholder="13:00" placeholderTextColor={colors.textSecondary} />
-      <Text style={typography.label}>Večera (HH:MM)</Text>
-      <TextInput style={common.input} value={vecera} onChangeText={setVecera} placeholder="19:00" placeholderTextColor={colors.textSecondary} />
+      <Text style={typography.sectionLabel}>Kad obično jedeš?</Text>
+      <Card style={{ paddingVertical: 4 }}>
+        {obroci.map((o, i) => (
+          <View key={o.label} style={[styles.vremeRow, i < obroci.length - 1 && styles.vremeBorder]}>
+            <Icon name={o.icon} color={colors.textSecondary} />
+            <Text style={[typography.bodyStrong, { flex: 1 }]}>{o.label}</Text>
+            <TextInput
+              style={[common.input, styles.vremeInput]}
+              value={o.value}
+              onChangeText={o.set}
+              placeholder={o.placeholder}
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numbers-and-punctuation"
+              maxLength={5}
+              accessibilityLabel={`${o.label}, vreme`}
+            />
+          </View>
+        ))}
+      </Card>
 
-      <TouchableOpacity style={[common.primaryButton, { marginTop: 24 }]} onPress={save} disabled={saving}>
+      <TouchableOpacity style={[common.primaryButton, { marginTop: 12 }]} onPress={save} disabled={saving}>
         <Text style={common.primaryButtonText}>{saving ? "Čuvam..." : "Sačuvaj"}</Text>
       </TouchableOpacity>
 
@@ -102,3 +122,10 @@ export default function PodsetniciScreen() {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  switchRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  vremeRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
+  vremeBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  vremeInput: { width: 88, marginBottom: 0, textAlign: "center", paddingVertical: 10 },
+});

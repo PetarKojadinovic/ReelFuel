@@ -3,7 +3,7 @@
  * Ikone: Ionicons iz @expo/vector-icons (JS + font, ne traži novi build).
  */
 import { ReactNode } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, ViewStyle, StyleProp } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors, fonts } from "../theme";
 import { common, typography } from "../styles/common";
@@ -189,6 +189,95 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   return <View style={[common.card, style]}>{children}</View>;
 }
 
+/** Kvadrat sa ikonom (recept, vežba, upozorenje...). */
+export function IconTile({ icon, color = colors.primary, size = 48 }: { icon: IconName; color?: string; size?: number }) {
+  return (
+    <View style={[styles.iconTile, { width: size, height: size, borderRadius: Math.round(size * 0.3) }]}>
+      <Icon name={icon} size={Math.round(size * 0.5)} color={color} />
+    </View>
+  );
+}
+
+/** Zaglavlje ekrana sa detaljima: ikona, mala oznaka ("RECEPT") i naslov. */
+export function DetailHeader({ icon, eyebrow, title }: { icon: IconName; eyebrow?: string; title: string }) {
+  return (
+    <View style={styles.detailHeader}>
+      <IconTile icon={icon} size={56} />
+      <View style={{ flex: 1 }}>
+        {eyebrow ? <Text style={typography.eyebrow}>{eyebrow}</Text> : null}
+        <Text style={[typography.title, { fontSize: 26 }]}>{title}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Kartica sa brojem: "Kalorije 450 kcal". Stavljaj ih u `common.row`. */
+export function StatCard({ label, value, unit }: { label: string; value: string | number; unit?: string }) {
+  return (
+    <View style={[common.card, { flex: 1 }]}>
+      <Text style={typography.bodySecondary}>{label}</Text>
+      <Text style={styles.statValue}>
+        {value}
+        {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+      </Text>
+    </View>
+  );
+}
+
+/** Poruka preko celog ekrana: učitavanje, greška, prazno, pitanje sa 1-2 dugmeta. */
+export function Message({
+  icon,
+  iconColor = colors.primary,
+  loading,
+  title,
+  text,
+  action,
+  onAction,
+  secondary,
+  onSecondary,
+}: {
+  icon?: IconName;
+  iconColor?: string;
+  loading?: boolean;
+  title?: string;
+  text?: string;
+  action?: string;
+  onAction?: () => void;
+  secondary?: string;
+  onSecondary?: () => void;
+}) {
+  return (
+    <View style={[common.centered, styles.message]}>
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : icon ? (
+        <Icon name={icon} size={44} color={iconColor} />
+      ) : null}
+      {title ? <Text style={[typography.heading, { textAlign: "center" }]}>{title}</Text> : null}
+      {text ? <Text style={[typography.bodySecondary, { textAlign: "center" }]}>{text}</Text> : null}
+      {action && onAction && (
+        <TouchableOpacity style={[common.primaryButton, styles.messageBtn]} onPress={onAction}>
+          <Text style={common.primaryButtonText}>{action}</Text>
+        </TouchableOpacity>
+      )}
+      {secondary && onSecondary && (
+        <TouchableOpacity style={[common.secondaryButton, styles.messageBtn]} onPress={onSecondary}>
+          <Text style={common.secondaryButtonText}>{secondary}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+/** Dugme koje izgleda kao tekst ("Odbaci", "Skeniraj ponovo"). */
+export function TextButton({ title, onPress, color }: { title: string; onPress: () => void; color?: string }) {
+  return (
+    <TouchableOpacity style={styles.textBtn} onPress={onPress}>
+      <Text style={[styles.textBtnText, color ? { color } : null]}>{title}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   dayStrip: { flexDirection: "row", gap: 6, marginBottom: 16 },
   dayBtn: {
@@ -220,4 +309,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   empty: { alignItems: "center", gap: 8, paddingVertical: 24 },
+  iconTile: { backgroundColor: colors.surfaceAlt, justifyContent: "center", alignItems: "center" },
+  detailHeader: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 16 },
+  statValue: { fontSize: 22, fontFamily: fonts.black, color: colors.textPrimary, marginTop: 4 },
+  statUnit: { fontSize: 14, fontFamily: fonts.bold, color: colors.textSecondary },
+  message: { padding: 24, gap: 10 },
+  messageBtn: { alignSelf: "stretch", marginTop: 6 },
+  textBtn: { minHeight: 44, justifyContent: "center", alignItems: "center", marginTop: 6 },
+  textBtnText: { fontSize: 15, fontFamily: fonts.extrabold, color: colors.textSecondary },
 });
