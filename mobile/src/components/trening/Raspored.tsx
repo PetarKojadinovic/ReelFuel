@@ -251,6 +251,7 @@ export default function Raspored({ refreshKey }: { refreshKey: number }) {
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={typography.bodyStrong}>{v.naziv}</Text>
+                    {v.serije_i_ponavljanja ? <Text style={styles.serije}>{v.serije_i_ponavljanja}</Text> : null}
                     {v.grupa_misica ? (
                       <Text style={typography.bodySecondary}>
                         {v.grupa_misica}
@@ -258,7 +259,6 @@ export default function Raspored({ refreshKey }: { refreshKey: number }) {
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={styles.serije}>{v.serije_i_ponavljanja}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   vezbaBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
   check: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: colors.border, justifyContent: "center", alignItems: "center" },
   checkOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  serije: { fontSize: 14, fontFamily: fonts.bold, color: colors.textSecondary },
+  serije: { fontSize: 14, fontFamily: fonts.bold, color: colors.primary, marginTop: 2 },
   kalRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   toggle: { width: 48, height: 28, borderRadius: 14, backgroundColor: colors.surfaceAlt, padding: 3 },
   toggleOn: { backgroundColor: colors.primary },

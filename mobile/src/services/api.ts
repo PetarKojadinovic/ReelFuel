@@ -569,3 +569,16 @@ export async function resetKorekcija() {
   if (!response.ok) throw new Error("Greska pri vracanju cilja");
   return response.json();
 }
+export async function getBackups(): Promise<{ kopije: { naziv: string; vreme: string; velicina_kb: number }[]; zadrzi: number }> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/backup/`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri ucitavanju kopija");
+  return response.json();
+}
+
+export async function napraviBackup(): Promise<{ naziv: string; vreme: string; velicina_kb: number }> {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/backup/`, { method: "POST", headers: authHeaders() });
+  if (!response.ok) throw new Error("Kopija nije napravljena");
+  return response.json();
+}

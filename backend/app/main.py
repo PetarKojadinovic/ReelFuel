@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.security import verify_api_key
 from app.models.database import init_db, SessionLocal, IngestJob
+from app.services.backup import dnevna_kopija
 from app.api.routes import (
     recipe,
     profile,
@@ -21,6 +22,7 @@ from app.api.routes import (
     korekcija,
     plan,
     proizvod,
+    backup,
 )
 
 app = FastAPI(title="ReelFuel API", dependencies=[Depends(verify_api_key)])
@@ -36,6 +38,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
+    dnevna_kopija()  # pre init_db, da kopija bude stanje pre eventualnog ALTER TABLE
     init_db()
     db = SessionLocal()
     try:
@@ -68,6 +71,7 @@ app.include_router(nedelja.router, prefix="/nedelja", tags=["nedelja"])
 app.include_router(korekcija.router, prefix="/korekcija", tags=["korekcija"])
 app.include_router(plan.router, prefix="/plan", tags=["plan"])
 app.include_router(proizvod.router, prefix="/proizvod", tags=["proizvod"])
+app.include_router(backup.router, prefix="/backup", tags=["backup"])
 
 
 @app.get("/")
