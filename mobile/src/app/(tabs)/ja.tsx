@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet, RefreshControl } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { getProfile, getWeightSummary, addWeightEntry, getBackups, napraviBackup } from "../../services/api";
-import { getRemindersOn } from "../../services/mealTimes";
+import { getRemindersOn, getAutoPlanOn, setAutoPlanOn } from "../../services/mealTimes";
 import { getTodayDate } from "../../utils/date";
 import { colors, fonts } from "../../theme";
 import { common, typography } from "../../styles/common";
@@ -39,6 +39,7 @@ export default function JaScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [tezina, setTezina] = useState<any>(null);
   const [podsetnici, setPodsetnici] = useState<boolean | null>(null);
+  const [autoPlan, setAutoPlan] = useState<boolean | null>(null);
   const [unos, setUnos] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [kopija, setKopija] = useState<string | undefined>(undefined);
@@ -46,6 +47,7 @@ export default function JaScreen() {
 
   const load = useCallback(async () => {
     getRemindersOn().then(setPodsetnici).catch(() => {});
+    getAutoPlanOn().then(setAutoPlan).catch(() => {});
     try {
       const p = await getProfile();
       setVeza(true);
@@ -215,6 +217,17 @@ export default function JaScreen() {
           title="Podsetnici za obroke"
           value={podsetnici == null ? undefined : podsetnici ? "Uključeni" : "Isključeni"}
           onPress={() => router.push("/podsetnici")}
+        />
+        <ListRow
+          icon="calendar-outline"
+          title="Nov plan svakog ponedeljka"
+          value={autoPlan == null ? undefined : autoPlan ? "Uključeno" : "Isključeno"}
+          valueColor={autoPlan ? colors.primary : undefined}
+          onPress={() => {
+            const novo = !autoPlan;
+            setAutoPlan(novo);
+            setAutoPlanOn(novo).catch(() => {});
+          }}
         />
         <ListRow icon="stats-chart-outline" title="Nedeljni izveštaj" onPress={() => router.push("/weekly-report")} />
         <ListRow icon="chatbubble-ellipses-outline" title="Pitaj asistenta" onPress={() => router.push("/chat")} />

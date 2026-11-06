@@ -161,6 +161,13 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - **Bag ispravljen**: reel bez audio trake (zvuk skinut zbog autorskih prava) → yt-dlp skine ceo video pa padne na FFmpeg ("unable to obtain file audio codec with ffprobe"). Ingest je već padao nazad na caption, ali je mp4 (15–40 MB) ostajao u `downloads/`. Sad `download_audio` briše ostatke.
 - Testovi: `tests/test_whisper_filter.py` (izmereni brojevi + bez audio trake). pytest 47/47.
 
+## 6m. Automatski nedeljni plan — popravke (2026-11-06)
+Funkcija postoji od faze 3 (Danas → `NedeljaIKorekcija` → `POST /nedelja/osvezi` → jelovnik + trening + lista). Popravljeno:
+- `plan_is_current` gleda `plan_data.nedelja_od` (lokalni datum, isto kao `/mealplan/generate`); stari planovi bez ključa koriste `created_at`. Ranije: UTC `created_at`, pa je u ponedeljak 00–01h stari plan važio kao aktuelan.
+- Prekidač je nestao pri redizajnu → vraćen u tab Ja: "Nov plan svakog ponedeljka" (AsyncStorage, podrazumevano uključeno).
+- Danas: kartica "Nova nedelja — pravim..." dok radi, "Plan za ovu nedelju je spreman" + "Pogledaj jelovnik" kad završi (jednom, može da se zatvori), "Pokušaj ponovo" (`?force=true`) kad ne uspe. Stilovi na `common`/`ui.tsx` (bez hardkodovanih boja). `onChanged` ide preko ref-a, pa se osvežavanje ne pokreće pri svakom renderu.
+- Testovi: `tests/test_nedelja_plan.py`. pytest 51/51, `tsc` prolazi. `GET /nedelja/status` na pravoj bazi (TestClient, samo čitanje) → `azurno` (plan od 2026-11-02). **Prava izrada u ponedeljak i kartice na telefonu nisu proverene.**
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Pesme sa tekstom prolaze Whisper filter kao govor (vidi 6l) — prihvaćeno.

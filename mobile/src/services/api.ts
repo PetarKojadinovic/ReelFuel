@@ -479,9 +479,9 @@ async function serverDetail(response: Response, fallback: string): Promise<strin
   return fallback;
 }
 
-export async function osveziNedelju() {
+export async function osveziNedelju(force = false) {
   const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/nedelja/osvezi`, { method: "POST", headers: authHeaders() });
+  const response = await fetch(`${API_BASE_URL}/nedelja/osvezi${force ? "?force=true" : ""}`, { method: "POST", headers: authHeaders() });
   if (!response.ok) throw new Error("Greska pri osvezavanju nedelje");
   return response.json();
 }
