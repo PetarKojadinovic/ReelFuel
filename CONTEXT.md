@@ -153,9 +153,17 @@ Korisnik je potvrdio da sve iz prethodnih faza radi na telefonu (share, notifika
 - **Vraćanje kopije (ručno, PowerShell iz `backend`)**: ugasi server, pa `Copy-Item reelfuel.db reelfuel-pre-vracanja.db; Copy-Item backups\<ime>.db reelfuel.db`, pa pokreni server.
 - Provereno: pytest 40/40 (kopija sadrži podatke, rotacija na 10, jednom dnevno); uživo na laptopu `POST`/`GET /backup/` rade, `PRAGMA integrity_check` = ok. `tsc` prolazi. **Red u "Ja" na telefonu nije proveren** (samo reload, ne treba build).
 
+## 6l. Whisper filter izmeren na pravim reelovima (2026-11-06)
+- `scripts/whisper_prag.py` (iz `backend`, venv): za listu linkova ispiše svaki Whisper segment sa `no_speech_prob`/`avg_logprob`/`compression_ratio` i da li ga filter zadržava. Ne dira bazu; audio se briše.
+- 8 reelova (2 samo muzika, 2 govor, 2 bez zvuka, 2 govor + muzika). Pravi govor: `avg_logprob` -0.22 do -0.52, `no_speech_prob` do 0.58 → sve zadržano. Izmišljen tekst na čistoj muzici: -3.07 → odbačen. **Pragovi ostaju isti** (`NO_SPEECH_PRAG=0.6`, `MIN_AVG_LOGPROB=-1.0`); kombinovano pravilo (no_speech I nizak logprob) čuva govor preko muzike sa nsp 0.58.
+- Pesma sa tekstom na našem jeziku (-0.72) prolazi kao "govor" — namerno se ne odseca: razmak do pravog govora je mali, a LLM ima i caption. Bolje zadržati smeće nego izgubiti recept.
+- Whisper jezik prepoznaje kao `hr`/`bs` i za srpski govor; prinudno `language="sr"` je u redu. Kvalitet transkripta (`small` model) je osrednji, ali dovoljan za izvlačenje recepta.
+- **Bag ispravljen**: reel bez audio trake (zvuk skinut zbog autorskih prava) → yt-dlp skine ceo video pa padne na FFmpeg ("unable to obtain file audio codec with ffprobe"). Ingest je već padao nazad na caption, ali je mp4 (15–40 MB) ostajao u `downloads/`. Sad `download_audio` briše ostatke.
+- Testovi: `tests/test_whisper_filter.py` (izmereni brojevi + bez audio trake). pytest 47/47.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
-- Whisper prag (`NO_SPEECH_PRAG=0.6`) nije podešen na pravim reelovima — možda odbacuje previše/premalo.
+- Pesme sa tekstom prolaze Whisper filter kao govor (vidi 6l) — prihvaćeno.
 - Stavke liste za kupovinu nastale pre 2026-11-02 nemaju `izvor`, pa ih `/shoppinglist/generate` ne briše.
 
 Kod/higijena:
@@ -170,7 +178,7 @@ Bezbednost / operativno:
 
 ## 8. Roadmap / ideje (po prioritetu)
 1. Proveriti novu ikonicu i splash na telefonu posle EAS builda.
-2. Podesiti Whisper prag na pravim reelovima.
+2. ~~Whisper prag~~ — izmeren, ostaje isti (6l). Opcija: model `medium` za bolji transkript (sporije na CPU).
 3. ~~Backup baze~~ — urađeno (6k). Export (CSV/JSON) i kopija van laptopa još ne postoje.
 5. Faza 5: hosting (VPS), HTTPS, prava autentikacija (nalozi/JWT), push preko FCM, cron za nedeljni plan.
 7. Ideje: kalendar B (raspored treninga po slobodnim terminima), deljenje liste za kupovinu, export/backup, vreme/vremenski uslovi za trening, Health Connect ako korisnik dobije uređaj.
