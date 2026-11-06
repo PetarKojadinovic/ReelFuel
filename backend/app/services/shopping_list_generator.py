@@ -1,7 +1,8 @@
 import os
-import json
 from anthropic import Anthropic
 from dotenv import load_dotenv
+
+from app.services.llm_utils import parse_json
 
 load_dotenv()
 
@@ -45,9 +46,5 @@ def generate_shopping_list(plan_data: dict) -> list:
         messages=[{"role": "user", "content": f"Sastojci iz nedeljnog plana:\n{ingredients_text}"}],
     )
 
-    raw_text = message.content[0].text.strip()
-    if raw_text.startswith("```"):
-        raw_text = raw_text.strip("`").replace("json", "", 1).strip()
-
-    result = json.loads(raw_text)
+    result = parse_json(message.content[0].text)
     return result.get("stavke", [])

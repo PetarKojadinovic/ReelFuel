@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -9,9 +11,9 @@ router = APIRouter()
 
 
 class LogEntryRequest(BaseModel):
-    datum: str
-    naziv: str
-    kalorije: int
+    datum: date  # "YYYY-MM-DD"
+    naziv: str = Field(min_length=1, max_length=200)
+    kalorije: int = Field(ge=0, le=10000)
     proteini_g: Optional[float] = Field(default=None, ge=0, le=500)
     obrok_tip: Optional[str] = None
     izvor: str = "slobodan"
@@ -20,7 +22,7 @@ class LogEntryRequest(BaseModel):
 @router.post("/")
 def add_entry(request: LogEntryRequest, db: Session = Depends(get_db)):
     entry = FoodLogEntry(
-        datum=request.datum,
+        datum=request.datum.isoformat(),
         naziv=request.naziv,
         kalorije=request.kalorije,
         proteini_g=request.proteini_g,

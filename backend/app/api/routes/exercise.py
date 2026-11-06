@@ -36,7 +36,8 @@ def process_exercise(request: ExerciseRequest, db: Session = Depends(get_db)):
         frame_paths = extract_frames(video_path)
         pose_result = analyze_video(video_path)
 
-        exercise_data = extract_exercise(transcript, pose_result, caption, frame_paths)
+        # extract_exercise ne prima frejmove (ranije je ovde uvek pucalo sa TypeError -> 500)
+        exercise_data = extract_exercise(transcript, pose_result, caption)
 
         db_exercise = Exercise(
             naziv_vezbe=exercise_data.get("naziv_vezbe"),

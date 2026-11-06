@@ -1,3 +1,4 @@
+import copy
 import os
 import json
 import logging
@@ -123,7 +124,9 @@ def execute_tool(tool_name: str, tool_input: dict, db: Session) -> str:
         plan = db.query(MealPlan).order_by(MealPlan.id.desc()).first()
         if not plan:
             return "Ne postoji nedeljni plan da se izmeni."
-        plan_data = dict(plan.plan_data or {})
+        # deepcopy: izmena ugnježdenog dict-a u mestu menja i stari objekat, pa SQLAlchemy
+        # ne vidi razliku i NE upiše izmenu u bazu (alat je javljao "izmenjen", a nije bio).
+        plan_data = copy.deepcopy(plan.plan_data or {})
         nadjen = False
         for day in plan_data.get("dani", []):
             if str(day.get("dan", "")).lower() == dan:
