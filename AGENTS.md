@@ -28,12 +28,14 @@ cd backend
 .\venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload --host 0.0.0.0     # Swagger: http://localhost:8000/docs
 python -m pytest -q                               # testovi (pip install -r requirements-dev.txt)
+python -m pytest -q --cov=app --cov-report=term   # sa pokrivenoscu
 ```
 Mobile:
 ```powershell
 cd mobile
 npx expo start -c            # -c je obavezno kad se menja .env (EXPO_PUBLIC_*)
 npx tsc --noEmit             # provera tipova
+npm test                     # jest testovi (mobile/__tests__/, ne u src/app)
 eas build --profile development --platform android   # novi build kad se menja native (plugin, app.json, nova native lib)
 ```
 Git provera pred push:

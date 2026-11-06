@@ -14,7 +14,7 @@ export default function CalorieRing({ progres, vrednost, oznaka }: { progres: nu
   const popunjeno = Math.round(Math.min(p, 1) * TACAKA);
   const boja = p > 1 ? colors.warning : colors.primary;
   return (
-    <View style={styles.wrap} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(Math.min(p, 1) * 100) }}>
+    <View style={styles.wrap} accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(Math.min(p, 1) * 100) }}>
       {Array.from({ length: TACAKA }).map((_, i) => {
         const ugao = (i / TACAKA) * 2 * Math.PI - Math.PI / 2;
         return (

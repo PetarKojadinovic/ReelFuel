@@ -168,6 +168,32 @@ Funkcija postoji od faze 3 (Danas → `NedeljaIKorekcija` → `POST /nedelja/osv
 - Danas: kartica "Nova nedelja — pravim..." dok radi, "Plan za ovu nedelju je spreman" + "Pogledaj jelovnik" kad završi (jednom, može da se zatvori), "Pokušaj ponovo" (`?force=true`) kad ne uspe. Stilovi na `common`/`ui.tsx` (bez hardkodovanih boja). `onChanged` ide preko ref-a, pa se osvežavanje ne pokreće pri svakom renderu.
 - Testovi: `tests/test_nedelja_plan.py`. pytest 51/51, `tsc` prolazi. `GET /nedelja/status` na pravoj bazi (TestClient, samo čitanje) → `azurno` (plan od 2026-11-02). **Prava izrada u ponedeljak i kartice na telefonu nisu proverene.**
 
+## 6n. Funkcijski testovi API-ja (2026-11-06)
+- `tests/conftest.py`: fixture `api` = `TestClient` nad celom aplikacijom (sve rute + `verify_api_key`) sa privremenom bazom; `get_db`, `SessionLocal` u ingest/nedelja i `engine` u backup su zamenjeni test bazom. Bez `with TestClient` → startup (dnevna kopija, `init_db` prave baze) se ne pokreće. Testovi postavljaju SVOJE `APP_SECRET_KEY`/`ANTHROPIC_API_KEY` pre importa → pravi ključevi se ne koriste, slučajan poziv AI-ja pada umesto da troši kredit.
+- Novi fajlovi: `test_api_osnovno.py` (ključ 401/200, profil + validacija, težina, dnevnik hrane, kopija, nedelja), `test_api_ingest.py` (ceo tok link → recept → save, duplikat linka, opis vs govor, reel bez zvuka, predug video, nepoznat tip, odbaci; internet i AI zamenjeni), `test_chat.py` (alati + petlja alata sa lažnim Claude-om, 500 bez internog teksta), `test_korekcija.py` (predlog, prihvati/odbij/reset, minimum kalorija).
+- **Bagovi koje su testovi našli i ispravljeni**:
+  - Chat `swap_meal` je javljao "Obrok izmenjen", a izmena se NIJE upisivala u bazu (plitka kopija `plan_data` → SQLAlchemy ne vidi promenu). Sada `copy.deepcopy`.
+  - `POST /weightlog/` za prošli datum je menjao trenutnu težinu u profilu → sada samo ako je datum najnoviji.
+  - `POST /weightlog/` je primao bilo koju težinu (-3, 1000) i datum ("juce") → `tezina_kg` 20–400, `datum` YYYY-MM-DD (422).
+  - `POST /log/` je primao negativne kalorije i loš datum → `kalorije` 0–10000, `naziv` 1–200 znakova, `datum` YYYY-MM-DD.
+- Rezultat: **90/90 prolazi (~40 s), pokrivenost backenda 35% → 72%**. `ruff` (F, E9) čist. `pytest-cov` i `ruff` dodati u `requirements-dev.txt`.
+- Pokretanje (iz `backend`): `.\venv\Scripts\python -m pytest -q --cov=app --cov-report=term`; provera koda: `.\venv\Scripts\ruff check app tests --isolated --select F,E9,B904,C901`.
+uff check app tests --isolated --select F,E9,B904,C901`.
+- Još bez testova (niska pokrivenost): `pose_analysis` 17%, `report` 26%, `proizvod_service` 28%, `shopping_list_generator`/`meal_plan_generator`/`workout_plan` ~36–48% (LLM generatori), `recipe`/`exercise` rute ~42%. Sistemski (telefon → server) i mobile testovi ne postoje.
+
+## 6o. Testovi: backend 95%, prvi mobile testovi (2026-11-06)
+**Backend** (pytest, 151 test, ~50 s, pokrivenost **95%**): novi `test_generatori.py` (jelovnik/trening/kupovina/slika obroka/izvlačenje recepta i vežbe + njihove rute, lažni Claude `LazniLLM` u `conftest.py`), `test_ostalo.py` (bar-kod i Open Food Facts, etiketa, nedeljni izveštaj, analiza pokreta sa lažnim MediaPipe/cv2, Whisper filter, yt-dlp podešavanja, frejmovi, nedeljno osvežavanje u pozadini), `test_dan_api.py` (`/dan` akcije, slika, opis, glas + brisanje snimka, klasifikacija, tok za vežbu u ingest-u).
+- **Bagovi nađeni i ispravljeni**: `POST /exercise/` je UVEK vraćao 500 (`extract_exercise` dobijao 4 argumenta, prima 3 — ista greška kao ranije u `/recipe/`). Generatori jelovnika/treninga/kupovine sada koriste `llm_utils.parse_json` (ranije sopstveno skidanje ```json ograde, protivno AGENTS.md).
+- Najmanje pokriveno: `dan.py`/`plan.py`/`video_downloader.py` ~80–87% (grane grešaka).
+
+**Mobile** (jest + jest-expo, 36 testova u `mobile/__tests__/`, NE u `src/app` jer bi ih Expo Router učitao kao ekrane):
+- Zavisnosti (samo dev, ne ulaze u APK, ne traže build): `jest-expo ~57.0.6`, `jest ~29.7`, `@types/jest`, `@testing-library/react-native ^14` (+ peer `test-renderer`). RNTL 14: `render` i `fireEvent.press` su async → `await`.
+- `package.json` → `jest` (preset `jest-expo`, `setupFiles: jest.setup.js` = AsyncStorage mock, `testTimeout` 15 s), skripta `npm test`. `tsconfig.json` → `types: ["jest", "node"]`.
+- Pokriveno: `utils/date.ts` (formatiranje, pomeranje sata, nedelja od ponedeljka), `mealTimes.ts`, `clipboardLink.izvuciPodrzanLink` (lažni domeni tipa `instagram.com.evil`), `apiConfig.ts` (auto/ručno/release), `api.ts` (ključ, `force`, greške, kopija), `ui.tsx` (ListRow, Message, EmptyState, HighlightCard, TextButton), `CalorieRing`, `NedeljaIKorekcija` (nova nedelja → spreman → jelovnik, greška → force, isključen plan, prihvati korekciju).
+- `CalorieRing` dobio `accessible` (TalkBack ga ranije nije čitao kao jednu celinu — otkrio test).
+- Pokrivenost mobile koda **~9%** (ekrani nisu testirani). `tsc` prolazi, `expo export --platform android` sastavlja bundle.
+- Pokretanje (iz `mobile`): `npm test`; sa pokrivenošću: `npx jest --coverage --collectCoverageFrom="src/**/*.{ts,tsx}"`.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
 - Pesme sa tekstom prolaze Whisper filter kao govor (vidi 6l) — prihvaćeno.
@@ -175,7 +201,9 @@ Funkcionalni:
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
-- Testovi samo za deo backenda (`backend/tests/`); nema mobile testova. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
+- Backend testovi: 151, pokrivenost 95% (6o). Mobile: 36 testova, ~9% (ekrani netestirani). Sistemskih (telefon → server) testova nema. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
+- Previše složene funkcije (ruff C901): `ingest_pipeline._run`, `chat_service.execute_tool`, `kalorijska_korekcija._napravi_predlog`. `mobile/src/services/api.ts` (584 linije) ponavlja isti fetch obrazac; 44× `: any` u mobile kodu.
+- Kopija baze postoji samo na laptopu (`backend/backups/`); korisnik nema OneDrive/Google Drive — odloženo.
 
 Bezbednost / operativno:
 - Ključevi (Anthropic, `APP_SECRET_KEY`, ngrok) rotirani 2026-11-02 (potvrdio korisnik; aplikacija radi sa novim ključem).

@@ -1,7 +1,8 @@
 import os
-import json
 from anthropic import Anthropic
 from dotenv import load_dotenv
+
+from app.services.llm_utils import parse_json
 
 load_dotenv()
 
@@ -70,11 +71,7 @@ Napravi nedeljni plan treninga za {tip_treninga}."""
         messages=[{"role": "user", "content": user_message}],
     )
 
-    raw_text = message.content[0].text.strip()
-    if raw_text.startswith("```"):
-        raw_text = raw_text.strip("`").replace("json", "", 1).strip()
-
-    return json.loads(raw_text)
+    return parse_json(message.content[0].text)
 
 
 def generate_weekly_workout_plan(broj_dana: int, cilj: str, saved_exercises: list) -> dict:

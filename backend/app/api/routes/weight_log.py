@@ -1,5 +1,7 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.models.database import get_db, WeightLog, UserProfile
 
@@ -7,20 +9,23 @@ router = APIRouter()
 
 
 class WeightEntryRequest(BaseModel):
-    datum: str
-    tezina_kg: float
+    datum: date  # "YYYY-MM-DD"
+    tezina_kg: float = Field(gt=20, lt=400)  # isti opseg kao u profilu
 
 
 @router.post("/")
 def add_entry(request: WeightEntryRequest, db: Session = Depends(get_db)):
-    existing = db.query(WeightLog).filter(WeightLog.datum == request.datum).first()
+    datum = request.datum.isoformat()
+    existing = db.query(WeightLog).filter(WeightLog.datum == datum).first()
     if existing:
         existing.tezina_kg = request.tezina_kg
     else:
-        db.add(WeightLog(datum=request.datum, tezina_kg=request.tezina_kg))
+        db.add(WeightLog(datum=datum, tezina_kg=request.tezina_kg))
 
+    # Profil drži TRENUTNU težinu: upis za prošli datum (dopuna istorije) je ne menja
+    najnoviji = db.query(WeightLog.datum).order_by(WeightLog.datum.desc()).first()
     profile = db.query(UserProfile).first()
-    if profile:
+    if profile and (najnoviji is None or datum >= najnoviji[0]):
         profile.tezina_kg = request.tezina_kg
 
     db.commit()
