@@ -82,6 +82,7 @@ NOVE_KOLONE = {
     "recipes": {"proteini_g": "FLOAT"},
     "food_log": {"proteini_g": "FLOAT"},
     "proizvod": {"proteini_100g": "FLOAT"},
+    "exercises": {"katalog_id": "VARCHAR"},
 }
 
 
@@ -111,6 +112,27 @@ class Exercise(Base):
     serije_i_ponavljanja = Column(String)
     detektovano_ponavljanja = Column(Integer, nullable=True)
     source_url = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    # Veza sa katalogom vežbi (services/vezbe_katalog.py): NULL = još nije traženo, "" = nema slične
+    katalog_id = Column(String, nullable=True)
+
+
+class VezbaNazivVeza(Base):
+    """Veza naziva vežbe iz plana treninga sa katalogom (plan ima samo nazive, ne Exercise redove)."""
+    __tablename__ = "vezba_naziv_veza"
+
+    naziv = Column(String, primary_key=True)  # normalizovan: mala slova, jedan razmak
+    katalog_id = Column(String)  # "" = nema u katalogu
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class VezbaPrevod(Base):
+    """Srpski prevod naziva i koraka vežbe iz kataloga (prevodi se jednom, pri prvom otvaranju)."""
+    __tablename__ = "vezba_prevod"
+
+    katalog_id = Column(String, primary_key=True)
+    naziv = Column(String)
+    koraci = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class WorkoutPlan(Base):

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Platform } from "react-native";
+import { router } from "expo-router";
 import { getProfile, generateWorkoutPlan, getLatestWorkoutPlan, addWorkoutLogEntry, getWorkoutDayLog } from "../../services/api";
 import { isValidHM } from "../../services/mealTimes";
 import {
@@ -91,6 +92,16 @@ export default function Raspored({ refreshKey }: { refreshKey: number }) {
       setUradjeno((prev) => prev.filter((n) => n !== vezba.naziv));
       Alert.alert("Greška", "Nije sačuvano.");
     }
+  };
+
+  const otvoriOpis = (v: any) => {
+    const exercise = {
+      id: typeof v.exercise_id === "number" ? v.exercise_id : undefined,
+      naziv_vezbe: v.naziv,
+      grupa_misica: v.grupa_misica,
+      serije_i_ponavljanja: v.serije_i_ponavljanja,
+    };
+    router.push({ pathname: "/exercise-result", params: { exercise: JSON.stringify(exercise) } });
   };
 
   const zavrsio = async (day: any) => {
@@ -259,6 +270,13 @@ export default function Raspored({ refreshKey }: { refreshKey: number }) {
                       </Text>
                     ) : null}
                   </View>
+                  <TouchableOpacity
+                    onPress={() => otvoriOpis(v)}
+                    style={styles.info}
+                    accessibilityLabel={`Kako se radi ${v.naziv}`}
+                  >
+                    <Icon name="information-circle-outline" size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               );
             })}
@@ -360,6 +378,7 @@ const styles = StyleSheet.create({
   vezbaBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
   check: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: colors.border, justifyContent: "center", alignItems: "center" },
   checkOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  info: { padding: 6, marginRight: -6 },
   serije: { fontSize: 14, fontFamily: fonts.bold, color: colors.primary, marginTop: 2 },
   kalRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   toggle: { width: 48, height: 28, borderRadius: 14, backgroundColor: colors.surfaceAlt, padding: 3 },
