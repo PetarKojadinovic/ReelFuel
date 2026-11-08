@@ -182,6 +182,53 @@ export async function deleteExercise(id: number) {
   return response.json();
 }
 
+/** Vežba + podaci iz kataloga (mišići, koraci, slike). Prvi put backend poveže vežbu sa katalogom (AI). */
+export async function getExerciseDetails(id: number) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/exercise/${id}/detalji`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri ucitavanju vezbe");
+  return response.json();
+}
+
+export async function searchExerciseCatalog(q: string) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/exercise/katalog?q=${encodeURIComponent(q)}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri pretrazi");
+  return response.json();
+}
+
+/** Opis vežbe iz plana treninga (plan ima samo naziv). */
+export async function getCatalogByName(naziv: string, grupa?: string) {
+  const API_BASE_URL = await getApiUrl();
+  const q = `naziv=${encodeURIComponent(naziv)}&grupa=${encodeURIComponent(grupa ?? "")}`;
+  const response = await fetch(`${API_BASE_URL}/exercise/katalog/po-nazivu?${q}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Greska pri ucitavanju vezbe");
+  return response.json();
+}
+
+export async function setCatalogByName(naziv: string, katalogId: string | null) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/exercise/katalog/po-nazivu`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ naziv, katalog_id: katalogId }),
+  });
+  if (!response.ok) throw new Error("Greska pri cuvanju izbora");
+  return response.json();
+}
+
+/** Ručno izaberi vežbu iz kataloga; `null` = "nema je u katalogu". */
+export async function setExerciseCatalog(id: number, katalogId: string | null) {
+  const API_BASE_URL = await getApiUrl();
+  const response = await fetch(`${API_BASE_URL}/exercise/${id}/katalog`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ katalog_id: katalogId }),
+  });
+  if (!response.ok) throw new Error("Greska pri cuvanju izbora");
+  return response.json();
+}
+
 export async function generateWorkoutPlan() {
   const API_BASE_URL = await getApiUrl();
   const response = await fetch(`${API_BASE_URL}/workoutplan/generate`, {

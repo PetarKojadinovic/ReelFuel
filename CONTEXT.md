@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-06 (provera na telefonu, novi README, sporedni ekrani na nove komponente). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-08 (katalog vežbi: mišići, koraci, slike). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -38,10 +38,10 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 `recipe`, `profile`, `mealplan`, `chat`, `log` (food_log), `exercise`, `workoutplan`, `workoutlog`, `weightlog`, `shoppinglist` (generate, generate-from-recipe, get, toggle, delete), `report`, `ingest`, `dan`, `nedelja`, `korekcija`, `plan`, `proizvod` (bar-kod), `backup`.
 Tačne putanje: Swagger na `/docs` (izvor istine). Sve rute osim eventualno `/docs` idu kroz `verify_api_key`.
 
-Ključni servisi (`backend/app/services/`): `video_downloader` (download_audio/video, fetch_metadata), `transcription`, `recipe_extractor` / `exercise_extractor` (primaju opcioni `caption`), `llm_utils.parse_json`, `ingest_pipeline`, `pose_analysis`, `meal_plan_generator`, `workout_plan_generator`, `shopping_list_generator`, `chat_service`, `daily_nutrition` (`get_dnevni_cilj`), `meal_photo`, `kalorijska_korekcija`, `nedelja_plan`.
+Ključni servisi (`backend/app/services/`): `video_downloader` (download_audio/video, fetch_metadata), `transcription`, `recipe_extractor` / `exercise_extractor` (primaju opcioni `caption`), `llm_utils.parse_json`, `ingest_pipeline`, `pose_analysis`, `meal_plan_generator`, `workout_plan_generator`, `shopping_list_generator`, `chat_service`, `daily_nutrition` (`get_dnevni_cilj`), `meal_photo`, `kalorijska_korekcija`, `nedelja_plan`, `vezbe_katalog`.
 
 ## 5. Model podataka (`models/database.py`)
-`Recipe`, `UserProfile` (tezina_kg, visina_cm, godine, pol, nivo_aktivnosti, cilj, raspodela_kalorija, broj_treninga_nedeljno, ciljna_tezina_kg), `MealPlan`, `ChatMessage`, `FoodLogEntry` (izvor: slobodan / plan / zamena / preskoceno), `Exercise`, `WorkoutPlan`, `WorkoutLogEntry`, `WeightLog`, `ShoppingListItem`, `IngestJob` (status: u_toku / greska / gotov…), `KalorijskaKorekcija`, `Proizvod` (barkod PK, naziv, kcal_100g, porcija_g, paket_g, izvor).
+`Recipe`, `UserProfile` (tezina_kg, visina_cm, godine, pol, nivo_aktivnosti, cilj, raspodela_kalorija, broj_treninga_nedeljno, ciljna_tezina_kg), `MealPlan`, `ChatMessage`, `FoodLogEntry` (izvor: slobodan / plan / zamena / preskoceno), `Exercise`, `WorkoutPlan`, `WorkoutLogEntry`, `WeightLog`, `ShoppingListItem`, `IngestJob` (status: u_toku / greska / gotov…), `KalorijskaKorekcija`, `VezbaPrevod` (katalog_id PK, naziv, koraci — srpski prevod iz kataloga), `VezbaNazivVeza` (naziv vežbe iz plana → katalog_id), `Exercise.katalog_id` (NULL = nije traženo, "" = nema u katalogu), `Proizvod` (barkod PK, naziv, kcal_100g, porcija_g, paket_g, izvor).
 Kalorijski cilj = Mifflin-St Jeor + aktivnost + cilj + prihvaćene korekcije, računa se samo u `get_dnevni_cilj`.
 
 ## 6. Mobile: ekrani (novi dizajn od 2026-11-02)
@@ -194,14 +194,24 @@ uff check app tests --isolated --select F,E9,B904,C901`.
 - Pokrivenost mobile koda **~9%** (ekrani nisu testirani). `tsc` prolazi, `expo export --platform android` sastavlja bundle.
 - Pokretanje (iz `mobile`): `npm test`; sa pokrivenošću: `npx jest --coverage --collectCoverageFrom="src/**/*.{ts,tsx}"`.
 
+## 6p. Katalog vežbi (2026-11-08)
+- Izvor: free-exercise-db (github.com/yuhonas/free-exercise-db), **Unlicense / javni domen**, 876 vežbi. Fajl `backend/data/vezbe_katalog.json` (~1 MB, u gitu), opis izvora i verzije u `backend/data/IZVOR.md`. Slike NISU u repou (~65 MB): telefon ih učitava direktno sa `raw.githubusercontent.com` na zaključanom commitu (`KATALOG_COMMIT` u `services/vezbe_katalog.py`) — traži internet na telefonu; GitHub vidi samo koja slika je tražena.
+- `services/vezbe_katalog.py`: učitava katalog jednom; mišići/oprema/nivo/kategorija prevode se rečnikom (`MISICI`, `OPREMA`...). Povezivanje sačuvane vežbe: tačan naziv → bez AI-ja; inače Haiku dobije listu svih naziva (keširan system prompt) i vrati engleski naziv + izbor iz liste; izmišljen naziv → nema veze. Naziv i koraci se prevode na srpski (Haiku) pri prvom otvaranju i čuvaju u `VezbaPrevod`; ako prevod ne uspe, prikaže se engleski.
+- Rute: `GET /exercise/{id}/detalji` (prvi put poveže + pamti `katalog_id`; greška AI-ja se ne pamti → pokušava ponovo), `PUT /exercise/{id}/katalog` (`{"katalog_id": "..."|null}`, ručna ispravka), `GET /exercise/katalog?q=` (pretraga po engleskom nazivu ili mišiću, do 20). `/exercise/list` vraća i `katalog_id`.
+- Baza: nova kolona `exercises.katalog_id` (preko `NOVE_KOLONE`) i nova tabela `vezba_prevod` — baza se ne briše.
+- Mobile: `exercise-result.tsx` (Trening → Moje vežbe → tap): slike početnog/krajnjeg položaja, glavni (zeleno) i pomoćni mišići, oprema · nivo, "Kako se radi" po koracima, "Nije ta vežba?" → pretraga kataloga / "Nema je ovde". Funkcije `getExerciseDetails`, `searchExerciseCatalog`, `setExerciseCatalog` u `api.ts`. Samo reload, ne treba novi build.
+- Provereno: pytest 171/171 (20 novih u `test_vezbe_katalog.py`, servis 100%), `tsc` prolazi, jest 36/36, `expo export --platform android` prolazi. Uživo sa pravim Haiku-om (privremena baza): Čučanj sa šipkom → Barbell Squat, Sklekovi → Pushups, Zgibovi → Pullups, Bugarski split čučanj → Split Squat with Dumbbells, Iskorak sa bučicama → Dumbbell Lunges, Hip thrust i Plank tačno; Burpee i "Ples" → nema (burpee nije u katalogu). Prevod koraka je razumljiv, ali ima sitnih jezičkih grešaka (Haiku). **Ekran na telefonu nije proveren.**
+- **Vežbe iz plana treninga** (Trening → Raspored → ikonica (i) pored vežbe; tap na red i dalje čekira): plan ima samo nazive, pa `GET /exercise/katalog/po-nazivu?naziv=&grupa=` poveže naziv i pamti vezu u novoj tabeli `vezba_naziv_veza` (naziv mala slova → katalog_id, "" = nema) → isti naziv u sledećem planu ne ide AI-ju. `PUT /exercise/katalog/po-nazivu` `{naziv, katalog_id|null}` = ručna ispravka. Vežba sa `exercise_id` (iz tvog reela) koristi vezu sačuvane vežbe; ako je obrisana, ide po nazivu. `api.ts`: `getCatalogByName`, `setCatalogByName`. Proveren: pytest 174/174, `tsc`, jest, export. **Na telefonu nije provereno** (i da li dugme (i) radi i na danima koji nisu danas).
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
+- Prevod koraka vežbi (Haiku) ponekad ima jezičke greške; prevodi su keširani u `vezba_prevod` (brisanje reda = nov prevod).
 - Pesme sa tekstom prolaze Whisper filter kao govor (vidi 6l) — prihvaćeno.
 - Stavke liste za kupovinu nastale pre 2026-11-02 nemaju `izvor`, pa ih `/shoppinglist/generate` ne briše.
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
-- Backend testovi: 151, pokrivenost 95% (6o). Mobile: 36 testova, ~9% (ekrani netestirani). Sistemskih (telefon → server) testova nema. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
+- Backend testovi: 174, pokrivenost 95% (6o, 6p). Mobile: 36 testova, ~9% (ekrani netestirani). Sistemskih (telefon → server) testova nema. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
 - Previše složene funkcije (ruff C901): `ingest_pipeline._run`, `chat_service.execute_tool`, `kalorijska_korekcija._napravi_predlog`. `mobile/src/services/api.ts` (584 linije) ponavlja isti fetch obrazac; 44× `: any` u mobile kodu.
 - Kopija baze postoji samo na laptopu (`backend/backups/`); korisnik nema OneDrive/Google Drive — odloženo.
 
