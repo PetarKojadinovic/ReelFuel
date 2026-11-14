@@ -17,6 +17,10 @@ if len(APP_SECRET_KEY) < 16:
     )
 
 
+def kljuc_ispravan(x_api_key: str | None) -> bool:
+    return bool(x_api_key) and hmac.compare_digest(x_api_key.encode(), APP_SECRET_KEY.encode())
+
+
 async def verify_api_key(x_api_key: str = Header(None)):
-    if not x_api_key or not hmac.compare_digest(x_api_key.encode(), APP_SECRET_KEY.encode()):
+    if not kljuc_ispravan(x_api_key):
         raise HTTPException(status_code=401, detail="Nevazeci ili nedostajuci API kljuc")

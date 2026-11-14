@@ -11,18 +11,59 @@ function authHeaders(extra: Record<string, string> = {}) {
   };
 }
 
-export async function submitRecipeLink(url: string) {
+type Opcije = {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** Šalje se kao JSON (postavlja Content-Type). */
+  json?: unknown;
+  /** Multipart telo; Content-Type se NE postavlja (fetch sam dodaje granicu). */
+  form?: FormData;
+  /** true = poruka iz servera (`detail`) ako postoji, inače `greska`. */
+  detalj?: boolean;
+};
+
+/**
+ * Jedini put do backenda: adresa (`getApiUrl`), ključ, provera `ok` i poruka o grešci.
+ * `greska` je tekst koji ekran prikaže kad zahtev ne uspe.
+ */
+async function zahtev<T = any>(putanja: string, greska: string, o: Opcije = {}): Promise<T> {
   const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/recipe/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ url }),
-  });
-  if (!response.ok) throw new Error("Greska pri obradi linka");
+  const init: RequestInit = { headers: authHeaders() };
+  if (o.method) init.method = o.method;
+  if (o.json !== undefined) {
+    init.headers = authHeaders({ "Content-Type": "application/json" });
+    init.body = JSON.stringify(o.json);
+  } else if (o.form) {
+    init.body = o.form;
+  }
+  const response = await fetch(`${API_BASE_URL}${putanja}`, init);
+  if (!response.ok) throw new Error(o.detalj ? await serverDetail(response, greska) : greska);
   return response.json();
 }
 
-export async function saveProfile(profile: {
+async function serverDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const j = await response.json();
+    if (typeof j.detail === "string") return j.detail;
+  } catch {}
+  return fallback;
+}
+
+const enc = encodeURIComponent;
+
+function nowHM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Trenutno vreme + vremena obroka (backend po njima zna koji obrok je "sledeći"). */
+async function vremenaObroka() {
+  const t = await getMealTimes();
+  return `sada=${enc(nowHM())}&dorucak=${enc(t.dorucak)}&rucak=${enc(t.rucak)}&vecera=${enc(t.vecera)}`;
+}
+
+// ---------- Profil ----------
+
+export function saveProfile(profile: {
   tezina_kg: number;
   visina_cm: number;
   godine: number;
@@ -33,76 +74,58 @@ export async function saveProfile(profile: {
   broj_treninga_nedeljno?: number;
   ciljna_tezina_kg?: number;
 }) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/profile/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(profile),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju profila");
-  return response.json();
+  return zahtev("/profile/", "Greska pri cuvanju profila", { method: "POST", json: profile });
 }
 
-export async function getProfile() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/profile/`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju profila");
-  return response.json();
+export function getProfile() {
+  return zahtev("/profile/", "Greska pri ucitavanju profila");
 }
 
-export async function generateMealPlan() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/mealplan/generate`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri generisanju plana");
-  return response.json();
+// ---------- Recepti i jelovnik ----------
+
+export function submitRecipeLink(url: string) {
+  return zahtev("/recipe/", "Greska pri obradi linka", { method: "POST", json: { url } });
 }
 
-export async function getLatestMealPlan() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/mealplan/latest`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju plana");
-  return response.json();
+export function listRecipes() {
+  return zahtev("/recipe/list", "Greska pri ucitavanju recepata");
 }
 
-export async function sendChatMessage(message: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/chat/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ message }),
-  });
-  if (!response.ok) throw new Error("Greska pri slanju poruke");
-  return response.json();
+export function deleteRecipe(id: number) {
+  return zahtev(`/recipe/${id}`, "Greska pri brisanju recepta", { method: "DELETE" });
 }
 
-export async function getChatHistory() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/chat/history`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju istorije");
-  return response.json();
+export function addManualRecipe(recipe: {
+  naziv_jela: string;
+  sastojci: { naziv: string; kolicina: string }[];
+  koraci: string[];
+  priblizne_kalorije?: string;
+  proteini_g?: number | null;
+}) {
+  return zahtev("/recipe/manual", "Greska pri cuvanju recepta", { method: "POST", json: recipe });
 }
 
-export async function listRecipes() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/recipe/list`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju recepata");
-  return response.json();
+export function generateMealPlan() {
+  return zahtev("/mealplan/generate", "Greska pri generisanju plana", { method: "POST" });
 }
 
-export async function deleteRecipe(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/recipe/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju recepta");
-  return response.json();
+export function getLatestMealPlan() {
+  return zahtev("/mealplan/latest", "Greska pri ucitavanju plana");
 }
 
-export async function addLogEntry(entry: {
+// ---------- Chat ----------
+
+export function sendChatMessage(message: string) {
+  return zahtev("/chat/", "Greska pri slanju poruke", { method: "POST", json: { message } });
+}
+
+export function getChatHistory() {
+  return zahtev("/chat/history", "Greska pri ucitavanju istorije");
+}
+
+// ---------- Dnevnik hrane ----------
+
+export function addLogEntry(entry: {
   datum: string;
   naziv: string;
   kalorije: number;
@@ -110,302 +133,144 @@ export async function addLogEntry(entry: {
   obrok_tip?: string;
   izvor: string;
 }) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/log/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(entry),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju unosa");
-  return response.json();
+  return zahtev("/log/", "Greska pri cuvanju unosa", { method: "POST", json: entry });
 }
 
-export async function deleteLogEntry(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/log/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju unosa");
-  return response.json();
+export function deleteLogEntry(id: number) {
+  return zahtev(`/log/${id}`, "Greska pri brisanju unosa", { method: "DELETE" });
 }
 
-export async function getDayLog(datum: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/log/${datum}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju dnevnika");
-  return response.json();
+export function getDayLog(datum: string) {
+  return zahtev(`/log/${datum}`, "Greska pri ucitavanju dnevnika");
 }
 
-export async function addManualRecipe(recipe: {
-  naziv_jela: string;
-  sastojci: { naziv: string; kolicina: string }[];
-  koraci: string[];
-  priblizne_kalorije?: string;
-  proteini_g?: number | null;
-}) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/recipe/manual`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(recipe),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju recepta");
-  return response.json();
+// ---------- Vežbe i katalog ----------
+
+export function submitExerciseLink(url: string) {
+  return zahtev("/exercise/", "Greska pri obradi linka", { method: "POST", json: { url } });
 }
 
-export async function submitExerciseLink(url: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ url }),
-  });
-  if (!response.ok) throw new Error("Greska pri obradi linka");
-  return response.json();
+export function listExercises() {
+  return zahtev("/exercise/list", "Greska pri ucitavanju vezbi");
 }
 
-export async function listExercises() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/list`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju vezbi");
-  return response.json();
+export function deleteExercise(id: number) {
+  return zahtev(`/exercise/${id}`, "Greska pri brisanju vezbe", { method: "DELETE" });
 }
 
-export async function deleteExercise(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju vezbe");
-  return response.json();
+export function addManualExercise(exercise: { naziv_vezbe: string; grupa_misica: string; serije_i_ponavljanja: string }) {
+  return zahtev("/exercise/manual", "Greska pri cuvanju vezbe", { method: "POST", json: exercise });
 }
 
 /** Vežba + podaci iz kataloga (mišići, koraci, slike). Prvi put backend poveže vežbu sa katalogom (AI). */
-export async function getExerciseDetails(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/${id}/detalji`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju vezbe");
-  return response.json();
+export function getExerciseDetails(id: number) {
+  return zahtev(`/exercise/${id}/detalji`, "Greska pri ucitavanju vezbe");
 }
 
-export async function searchExerciseCatalog(q: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/katalog?q=${encodeURIComponent(q)}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri pretrazi");
-  return response.json();
+export function searchExerciseCatalog(q: string) {
+  return zahtev(`/exercise/katalog?q=${enc(q)}`, "Greska pri pretrazi");
 }
 
 /** Opis vežbe iz plana treninga (plan ima samo naziv). */
-export async function getCatalogByName(naziv: string, grupa?: string) {
-  const API_BASE_URL = await getApiUrl();
-  const q = `naziv=${encodeURIComponent(naziv)}&grupa=${encodeURIComponent(grupa ?? "")}`;
-  const response = await fetch(`${API_BASE_URL}/exercise/katalog/po-nazivu?${q}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju vezbe");
-  return response.json();
+export function getCatalogByName(naziv: string, grupa?: string) {
+  return zahtev(`/exercise/katalog/po-nazivu?naziv=${enc(naziv)}&grupa=${enc(grupa ?? "")}`, "Greska pri ucitavanju vezbe");
 }
 
-export async function setCatalogByName(naziv: string, katalogId: string | null) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/katalog/po-nazivu`, {
+export function setCatalogByName(naziv: string, katalogId: string | null) {
+  return zahtev("/exercise/katalog/po-nazivu", "Greska pri cuvanju izbora", {
     method: "PUT",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ naziv, katalog_id: katalogId }),
+    json: { naziv, katalog_id: katalogId },
   });
-  if (!response.ok) throw new Error("Greska pri cuvanju izbora");
-  return response.json();
 }
 
 /** Ručno izaberi vežbu iz kataloga; `null` = "nema je u katalogu". */
-export async function setExerciseCatalog(id: number, katalogId: string | null) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/${id}/katalog`, {
-    method: "PUT",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ katalog_id: katalogId }),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju izbora");
-  return response.json();
+export function setExerciseCatalog(id: number, katalogId: string | null) {
+  return zahtev(`/exercise/${id}/katalog`, "Greska pri cuvanju izbora", { method: "PUT", json: { katalog_id: katalogId } });
 }
 
-export async function generateWorkoutPlan() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/workoutplan/generate`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri generisanju plana treninga");
-  return response.json();
+// ---------- Trening ----------
+
+export function generateWorkoutPlan() {
+  return zahtev("/workoutplan/generate", "Greska pri generisanju plana treninga", { method: "POST" });
 }
 
-export async function getLatestWorkoutPlan() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/workoutplan/latest`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju plana treninga");
-  return response.json();
+export function getLatestWorkoutPlan() {
+  return zahtev("/workoutplan/latest", "Greska pri ucitavanju plana treninga");
 }
 
-export async function addWorkoutLogEntry(entry: {
+export function addWorkoutLogEntry(entry: {
   datum: string;
   naziv_vezbe: string;
   serije_i_ponavljanja?: string;
   dan_treninga?: string;
   izvor: string;
 }) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/workoutlog/`, {
+  return zahtev("/workoutlog/", "Greska pri cuvanju unosa treninga", { method: "POST", json: entry });
+}
+
+export function deleteWorkoutLogEntry(id: number) {
+  return zahtev(`/workoutlog/${id}`, "Greska pri brisanju unosa treninga", { method: "DELETE" });
+}
+
+export function getWorkoutDayLog(datum: string) {
+  return zahtev(`/workoutlog/${datum}`, "Greska pri ucitavanju dnevnika treninga");
+}
+
+// ---------- Težina ----------
+
+export function addWeightEntry(entry: { datum: string; tezina_kg: number }) {
+  return zahtev("/weightlog/", "Greska pri cuvanju tezine", { method: "POST", json: entry });
+}
+
+export function deleteWeightEntry(id: number) {
+  return zahtev(`/weightlog/${id}`, "Greska pri brisanju unosa", { method: "DELETE" });
+}
+
+export function getWeightSummary() {
+  return zahtev("/weightlog/summary", "Greska pri ucitavanju istorije tezine");
+}
+
+// ---------- Kupovina i izveštaj ----------
+
+export function generateShoppingList() {
+  return zahtev("/shoppinglist/generate", "Greska pri generisanju liste", { method: "POST" });
+}
+
+export function generateShoppingListFromRecipe(recipeId: number) {
+  return zahtev("/shoppinglist/generate-from-recipe", "Greska pri dodavanju iz recepta", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(entry),
+    json: { recipe_id: recipeId },
   });
-  if (!response.ok) throw new Error("Greska pri cuvanju unosa treninga");
-  return response.json();
 }
 
-export async function deleteWorkoutLogEntry(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/workoutlog/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju unosa treninga");
-  return response.json();
+export function getShoppingList() {
+  return zahtev("/shoppinglist/", "Greska pri ucitavanju liste");
 }
 
-export async function getWorkoutDayLog(datum: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/workoutlog/${datum}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju dnevnika treninga");
-  return response.json();
+export function toggleShoppingItem(id: number) {
+  return zahtev(`/shoppinglist/${id}/toggle`, "Greska pri azuriranju stavke", { method: "PATCH" });
 }
 
-export async function addWeightEntry(entry: { datum: string; tezina_kg: number }) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/weightlog/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(entry),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju tezine");
-  return response.json();
+export function deleteShoppingItem(id: number) {
+  return zahtev(`/shoppinglist/${id}`, "Greska pri brisanju stavke", { method: "DELETE" });
 }
 
-export async function deleteWeightEntry(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/weightlog/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju unosa");
-  return response.json();
+export function getWeeklyReport() {
+  return zahtev("/report/weekly", "Greska pri ucitavanju izvestaja");
 }
 
-export async function getWeightSummary() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/weightlog/summary`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju istorije tezine");
-  return response.json();
+// ---------- Obrada linkova (ingest) ----------
+
+export function startIngest(url: string, tip?: "recept" | "vezba") {
+  return zahtev("/ingest/", "Greska pri slanju linka", { method: "POST", json: { url, tip } });
 }
 
-export async function addManualExercise(exercise: {
-  naziv_vezbe: string;
-  grupa_misica: string;
-  serije_i_ponavljanja: string;
-}) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/exercise/manual`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(exercise),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju vezbe");
-  return response.json();
+export function getIngestJob(id: string) {
+  return zahtev(`/ingest/${id}`, "Greska pri citanju statusa");
 }
 
-export async function generateShoppingList() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/shoppinglist/generate`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri generisanju liste");
-  return response.json();
-}
-
-export async function getShoppingList() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/shoppinglist/`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju liste");
-  return response.json();
-}
-
-export async function toggleShoppingItem(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/shoppinglist/${id}/toggle`, {
-    method: "PATCH",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri azuriranju stavke");
-  return response.json();
-}
-
-export async function deleteShoppingItem(id: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/shoppinglist/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri brisanju stavke");
-  return response.json();
-}
-
-export async function getWeeklyReport() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/report/weekly`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju izvestaja");
-  return response.json();
-}
-
-export async function generateShoppingListFromRecipe(recipeId: number) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/shoppinglist/generate-from-recipe`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ recipe_id: recipeId }),
-  });
-  if (!response.ok) throw new Error("Greska pri dodavanju iz recepta");
-  return response.json();
-}
-
-
-export async function startIngest(url: string, tip?: "recept" | "vezba") {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/ingest/`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ url, tip }),
-  });
-  if (!response.ok) throw new Error("Greska pri slanju linka");
-  return response.json();
-}
-
-export async function getIngestJob(id: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/ingest/${id}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri citanju statusa");
-  return response.json();
-}
-
-export async function saveIngestJob(id: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/ingest/${id}/save`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({}),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju");
-  return response.json();
+export function saveIngestJob(id: string) {
+  return zahtev(`/ingest/${id}/save`, "Greska pri cuvanju", { method: "POST", json: {} });
 }
 
 export type PregledStavka = {
@@ -420,67 +285,34 @@ export type PregledStavka = {
 };
 
 export async function getIngestPregled(): Promise<PregledStavka[]> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/ingest/`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju liste za pregled");
-  const data = await response.json();
+  const data = await zahtev<{ stavke?: PregledStavka[] } | null>("/ingest/", "Greska pri ucitavanju liste za pregled");
   return data?.stavke ?? [];
 }
 
-export async function odbaciIngestJob(id: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/ingest/${id}/odbaci`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error("Greska pri odbacivanju");
-  return response.json();
+export function odbaciIngestJob(id: string) {
+  return zahtev(`/ingest/${id}/odbaci`, "Greska pri odbacivanju", { method: "POST" });
 }
 
-function nowHM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
+// ---------- Dan (plan kao dnevnik) ----------
 
 export async function getDan(datum: string) {
-  const API_BASE_URL = await getApiUrl();
-  const t = await getMealTimes();
-  const q =
-    `sada=${encodeURIComponent(nowHM())}` +
-    `&dorucak=${encodeURIComponent(t.dorucak)}` +
-    `&rucak=${encodeURIComponent(t.rucak)}` +
-    `&vecera=${encodeURIComponent(t.vecera)}`;
-  const response = await fetch(`${API_BASE_URL}/dan/${datum}?${q}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju dana");
-  return response.json();
+  return zahtev(`/dan/${datum}?${await vremenaObroka()}`, "Greska pri ucitavanju dana");
 }
 
-export async function danAkcija(
+export function danAkcija(
   datum: string,
   obrokTip: string,
   body: { akcija: "pojeo" | "preskocio" | "zamena"; naziv?: string; kalorije?: number; proteini_g?: number | null }
 ) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/dan/${datum}/${obrokTip}`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju obroka");
-  return response.json();
+  return zahtev(`/dan/${datum}/${obrokTip}`, "Greska pri cuvanju obroka", { method: "POST", json: body });
 }
 
-export async function analyzeMealPhoto(base64: string, mediaType = "image/jpeg") {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/dan/analiza-slike`, {
+export function analyzeMealPhoto(base64: string, mediaType = "image/jpeg") {
+  return zahtev("/dan/analiza-slike", "Greska pri analizi slike", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ slika_base64: base64, media_type: mediaType }),
+    json: { slika_base64: base64, media_type: mediaType },
   });
-  if (!response.ok) throw new Error("Greska pri analizi slike");
-  return response.json();
 }
-
 
 export type ProcenaObroka = {
   tekst: string;
@@ -491,20 +323,12 @@ export type ProcenaObroka = {
 };
 
 /** Kratak opis obroka ("dva jaja i hleb") -> procena. Ništa se ne upisuje u dnevnik. */
-export async function proceniOpis(tekst: string): Promise<ProcenaObroka> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/dan/opis`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ tekst }),
-  });
-  if (!response.ok) throw new Error(await serverDetail(response, "Procena nije uspela"));
-  return response.json();
+export function proceniOpis(tekst: string): Promise<ProcenaObroka> {
+  return zahtev("/dan/opis", "Procena nije uspela", { method: "POST", json: { tekst }, detalj: true });
 }
 
 /** Snimak glasa (uri sa telefona) -> tekst -> procena. */
 export async function proceniGlas(uri: string): Promise<ProcenaObroka> {
-  const API_BASE_URL = await getApiUrl();
   // Expo fetch ne prima React Native oblik { uri, name, type } ("Unsupported FormDataPart implementation"),
   // nego File iz expo-file-system (ima bytes(), name i type). Učitava se ovde da web ne bi pukao.
   const { File } = require("expo-file-system") as typeof import("expo-file-system");
@@ -512,55 +336,48 @@ export async function proceniGlas(uri: string): Promise<ProcenaObroka> {
   if (!fajl.exists) throw new Error("Snimak nije pronađen");
   const form = new FormData();
   form.append("snimak", fajl as any, fajl.name || "obrok.m4a");
-  // Bez Content-Type: fetch sam postavlja multipart granicu
-  const response = await fetch(`${API_BASE_URL}/dan/glas`, { method: "POST", headers: authHeaders(), body: form });
-  if (!response.ok) throw new Error(await serverDetail(response, "Prepoznavanje glasa nije uspelo"));
-  return response.json();
+  return zahtev("/dan/glas", "Prepoznavanje glasa nije uspelo", { method: "POST", form, detalj: true });
 }
 
-async function serverDetail(response: Response, fallback: string): Promise<string> {
-  try {
-    const j = await response.json();
-    if (typeof j.detail === "string") return j.detail;
-  } catch {}
-  return fallback;
+// ---------- Nedeljni plan i korekcija cilja ----------
+
+export function osveziNedelju(force = false) {
+  return zahtev(`/nedelja/osvezi${force ? "?force=true" : ""}`, "Greska pri osvezavanju nedelje", { method: "POST" });
 }
 
-export async function osveziNedelju(force = false) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/nedelja/osvezi${force ? "?force=true" : ""}`, { method: "POST", headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri osvezavanju nedelje");
-  return response.json();
+export function getNedeljaStatus() {
+  return zahtev("/nedelja/status", "Greska pri citanju statusa");
 }
 
-export async function getNedeljaStatus() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/nedelja/status`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri citanju statusa");
-  return response.json();
+export function getKorekcija() {
+  return zahtev("/korekcija/", "Greska pri citanju predloga");
 }
+
+export function odgovoriKorekcija(id: number, prihvati: boolean) {
+  return zahtev(`/korekcija/${id}/odgovor`, "Greska pri cuvanju odgovora", { method: "POST", json: { prihvati } });
+}
+
+export function resetKorekcija() {
+  return zahtev("/korekcija/reset", "Greska pri vracanju cilja", { method: "POST" });
+}
+
+// ---------- Recept u plan ----------
 
 export async function getPlanSlotovi(recipeId: number) {
-  const API_BASE_URL = await getApiUrl();
-  const t = await getMealTimes();
-  const q =
-    `recipe_id=${recipeId}&sada=${encodeURIComponent(nowHM())}` +
-    `&dorucak=${encodeURIComponent(t.dorucak)}&rucak=${encodeURIComponent(t.rucak)}&vecera=${encodeURIComponent(t.vecera)}`;
-  const response = await fetch(`${API_BASE_URL}/plan/slotovi?${q}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri ucitavanju slobodnih obroka"));
-  return response.json();
+  return zahtev(`/plan/slotovi?recipe_id=${recipeId}&${await vremenaObroka()}`, "Greska pri ucitavanju slobodnih obroka", {
+    detalj: true,
+  });
 }
 
-export async function ubaciUPlan(recipeId: number, danOffset: number, obrokTip: string) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/plan/ubaci`, {
+export function ubaciUPlan(recipeId: number, danOffset: number, obrokTip: string) {
+  return zahtev("/plan/ubaci", "Greska pri ubacivanju u plan", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ recipe_id: recipeId, dan_offset: danOffset, obrok_tip: obrokTip }),
+    json: { recipe_id: recipeId, dan_offset: danOffset, obrok_tip: obrokTip },
+    detalj: true,
   });
-  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri ubacivanju u plan"));
-  return response.json();
 }
+
+// ---------- Bar-kod ----------
 
 export type Proizvod = {
   pronadjen: boolean;
@@ -574,58 +391,26 @@ export type Proizvod = {
   procitano?: boolean;
 };
 
-export async function getProizvod(barkod: string): Promise<Proizvod> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/proizvod/${encodeURIComponent(barkod)}`, { headers: authHeaders() });
-  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri trazenju proizvoda"));
-  return response.json();
+export function getProizvod(barkod: string): Promise<Proizvod> {
+  return zahtev(`/proizvod/${enc(barkod)}`, "Greska pri trazenju proizvoda", { detalj: true });
 }
 
-export async function procitajEtiketu(barkod: string, base64: string, naziv?: string): Promise<Proizvod> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/proizvod/${encodeURIComponent(barkod)}/etiketa`, {
+export function procitajEtiketu(barkod: string, base64: string, naziv?: string): Promise<Proizvod> {
+  return zahtev(`/proizvod/${enc(barkod)}/etiketa`, "Greska pri citanju etikete", {
     method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ slika_base64: base64, media_type: "image/jpeg", naziv }),
+    json: { slika_base64: base64, media_type: "image/jpeg", naziv },
+    detalj: true,
   });
-  if (!response.ok) throw new Error(await serverDetail(response, "Greska pri citanju etikete"));
-  return response.json();
 }
 
-export async function getKorekcija() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/korekcija/`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri citanju predloga");
-  return response.json();
+// ---------- Kopija baze ----------
+
+export type Kopija = { naziv: string; vreme: string; velicina_kb: number };
+
+export function getBackups(): Promise<{ kopije: Kopija[]; zadrzi: number }> {
+  return zahtev("/backup/", "Greska pri ucitavanju kopija");
 }
 
-export async function odgovoriKorekcija(id: number, prihvati: boolean) {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/korekcija/${id}/odgovor`, {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ prihvati }),
-  });
-  if (!response.ok) throw new Error("Greska pri cuvanju odgovora");
-  return response.json();
-}
-
-export async function resetKorekcija() {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/korekcija/reset`, { method: "POST", headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri vracanju cilja");
-  return response.json();
-}
-export async function getBackups(): Promise<{ kopije: { naziv: string; vreme: string; velicina_kb: number }[]; zadrzi: number }> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/backup/`, { headers: authHeaders() });
-  if (!response.ok) throw new Error("Greska pri ucitavanju kopija");
-  return response.json();
-}
-
-export async function napraviBackup(): Promise<{ naziv: string; vreme: string; velicina_kb: number }> {
-  const API_BASE_URL = await getApiUrl();
-  const response = await fetch(`${API_BASE_URL}/backup/`, { method: "POST", headers: authHeaders() });
-  if (!response.ok) throw new Error("Kopija nije napravljena");
-  return response.json();
+export function napraviBackup(): Promise<Kopija> {
+  return zahtev("/backup/", "Kopija nije napravljena", { method: "POST" });
 }

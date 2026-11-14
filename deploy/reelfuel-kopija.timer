@@ -1,0 +1,10 @@
+[Unit]
+Description=ReelFuel dnevna kopija baze u 03:30
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# Ako je server bio ugasen u 03:30, kopija se napravi cim se upali
+Persistent=true
+
+[Install]
+WantedBy=timers.target

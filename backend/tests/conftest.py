@@ -15,6 +15,16 @@ from sqlalchemy.orm import sessionmaker
 from app.models.database import init_db
 
 
+@pytest.fixture(autouse=True)
+def _ocisti_ogranicenje():
+    """Granica zahteva je zajednička za ceo proces -> svaki test počinje od nule."""
+    from app.core.rate_limit import ogranicenje
+
+    ogranicenje.ocisti()
+    yield
+    ogranicenje.ocisti()
+
+
 @pytest.fixture
 def db(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False})

@@ -1,0 +1,24 @@
+[Unit]
+Description=ReelFuel backend (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=reelfuel
+Group=reelfuel
+WorkingDirectory=/opt/reelfuel/backend
+# Samo 127.0.0.1: spolja se dolazi iskljucivo preko Caddy-ja (HTTPS).
+# Jedan proces: ingest semafor i granica zahteva su u memoriji.
+ExecStart=/opt/reelfuel/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+# Whisper model i yt-dlp kes idu ovde (home je zakljucan ispod)
+Environment=XDG_CACHE_HOME=/opt/reelfuel/cache
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

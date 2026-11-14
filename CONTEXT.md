@@ -1,6 +1,6 @@
 # CONTEXT.md — ReelFuel: šta je projekat i u kom je stanju
 
-Poslednje ažuriranje: 2026-11-08 (katalog vežbi: mišići, koraci, slike). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
+Poslednje ažuriranje: 2026-11-14 (api.ts sređen, testovi ekrana; priprema za Hetzner server). Pravila rada su u `AGENTS.md`. Ažuriraj ovaj fajl kad menjaš funkcionalnost.
 
 ## 1. Šta je ReelFuel
 Lična mobilna aplikacija za ishranu i trening. Korisnik podeli (Share) ili nalepi link TikTok/Instagram Reela → backend skine audio/video, transkribuje (Whisper), AI (Claude Haiku) izvuče **recept** ili **vežbu** → ulazi u biblioteku, pa u plan ishrane / plan treninga, dnevnik, praćenje težine, listu za kupovinu, nedeljni izveštaj i chat asistenta.
@@ -32,7 +32,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 | 3 | Automatski nedeljni plan (`nedelja_plan.py`), korekcija kalorijskog cilja (`kalorijska_korekcija.py`), `NedeljaIKorekcija.tsx` | Potvrđeno radi |
 | 4 | Health Connect (sat/vaga) | **Preskočeno** — korisnik nema uređaje; kod nije primenjen, `app.json` nepromenjen |
 | 8 | Spremno za pregled, link iz clipboard-a, plan po datumima, lista iz recepta (vidi 6d) | Potvrđeno na telefonu (2026-11-05, novi EAS build) |
-| 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **Nije započeto.** Istraženo: Oracle Always Free (2 OCPU/12 GB posle smanjenja iz juna 2026), Hetzner CX23 (~€4–6/mes), Contabo. Odluka odložena ("prvo automatizacija"). |
+| 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **U toku** (6s): izabran Hetzner CX23 + DuckDNS + Caddy (HTTPS). Skripte napisane, server još NIJE napravljen. Prava autentikacija i FCM nisu započeti. |
 
 ## 4. Backend: rute (prefiksi iz `main.py`)
 `recipe`, `profile`, `mealplan`, `chat`, `log` (food_log), `exercise`, `workoutplan`, `workoutlog`, `weightlog`, `shoppinglist` (generate, generate-from-recipe, get, toggle, delete), `report`, `ingest`, `dan`, `nedelja`, `korekcija`, `plan`, `proizvod` (bar-kod), `backup`.
@@ -178,7 +178,6 @@ Funkcija postoji od faze 3 (Danas → `NedeljaIKorekcija` → `POST /nedelja/osv
   - `POST /log/` je primao negativne kalorije i loš datum → `kalorije` 0–10000, `naziv` 1–200 znakova, `datum` YYYY-MM-DD.
 - Rezultat: **90/90 prolazi (~40 s), pokrivenost backenda 35% → 72%**. `ruff` (F, E9) čist. `pytest-cov` i `ruff` dodati u `requirements-dev.txt`.
 - Pokretanje (iz `backend`): `.\venv\Scripts\python -m pytest -q --cov=app --cov-report=term`; provera koda: `.\venv\Scripts\ruff check app tests --isolated --select F,E9,B904,C901`.
-uff check app tests --isolated --select F,E9,B904,C901`.
 - Još bez testova (niska pokrivenost): `pose_analysis` 17%, `report` 26%, `proizvod_service` 28%, `shopping_list_generator`/`meal_plan_generator`/`workout_plan` ~36–48% (LLM generatori), `recipe`/`exercise` rute ~42%. Sistemski (telefon → server) i mobile testovi ne postoje.
 
 ## 6o. Testovi: backend 95%, prvi mobile testovi (2026-11-06)
@@ -203,23 +202,49 @@ uff check app tests --isolated --select F,E9,B904,C901`.
 - Provereno: pytest 171/171 (20 novih u `test_vezbe_katalog.py`, servis 100%), `tsc` prolazi, jest 36/36, `expo export --platform android` prolazi. Uživo sa pravim Haiku-om (privremena baza): Čučanj sa šipkom → Barbell Squat, Sklekovi → Pushups, Zgibovi → Pullups, Bugarski split čučanj → Split Squat with Dumbbells, Iskorak sa bučicama → Dumbbell Lunges, Hip thrust i Plank tačno; Burpee i "Ples" → nema (burpee nije u katalogu). Prevod koraka je razumljiv, ali ima sitnih jezičkih grešaka (Haiku). **Ekran na telefonu nije proveren.**
 - **Vežbe iz plana treninga** (Trening → Raspored → ikonica (i) pored vežbe; tap na red i dalje čekira): plan ima samo nazive, pa `GET /exercise/katalog/po-nazivu?naziv=&grupa=` poveže naziv i pamti vezu u novoj tabeli `vezba_naziv_veza` (naziv mala slova → katalog_id, "" = nema) → isti naziv u sledećem planu ne ide AI-ju. `PUT /exercise/katalog/po-nazivu` `{naziv, katalog_id|null}` = ručna ispravka. Vežba sa `exercise_id` (iz tvog reela) koristi vezu sačuvane vežbe; ako je obrisana, ide po nazivu. `api.ts`: `getCatalogByName`, `setCatalogByName`. Proveren: pytest 174/174, `tsc`, jest, export. **Na telefonu nije provereno** (i da li dugme (i) radi i na danima koji nisu danas).
 
+## 6q. Katalog vežbi: ExerciseDB (GIF) + crtež mišića (2026-11-10)
+Korisniku se nije svideo free-exercise-db; probali smo wger (samo ~30% sa slikom — odbačeno istog dana). Sada: **ExerciseDB** (besplatni API, svaka vežba ima animirani GIF) + **crtež tela sa obojenim mišićima**. Sve iz 6p (rute, povezivanje, prevod, ručni izbor) ostaje, menja se izvor podataka.
+- `scripts/exercisedb_katalog.py` skida `oss.exercisedb.dev/api/v1/exercises` (bez ključa, stranice po 25) u `backend/data/vezbe_katalog.json`: 1500 vežbi, sve sa GIF-om (180p, `static.exercisedb.dev`). Skida "Step:N" sa koraka. **Fajl NIJE u gitu** (licenca ExerciseDB-a) → posle kloniranja pokreni skriptu; bez fajla katalog je prazan (server radi). Testovi koriste `backend/tests/data/vezbe_katalog.json`. Vidi `backend/data/IZVOR.md`.
+- `vezbe_katalog.py`: id = ExerciseDB `exerciseId` (npr. "I4hDWkc"); `MISICI` (engleski naziv → srpski + deo tela za crtež), `OPREMA`, `KATEGORIJA` (bodyParts). `detalji` vraća `slike: [gif]`, `telo_glavni`, `telo_sporedni`, `izvor`; `nivo: null`. GIF URL se šalje samo ako je sa `static.exercisedb.dev`. Lista naziva za AI je bez duplikata.
+- Stari katalog: veza na id koji ne postoji više se pri otvaranju **poveže ponovo**. Stare veze "" (nema) ostaju — "Potraži". Stari redovi u `vezba_prevod` ne smetaju.
+- Mobile: `exercise-result.tsx` prikazuje GIF preko `expo-image` (već u buildu; RN `Image` ne animira GIF na Androidu) na beloj pozadini (`colors.mediaBg`), u pretrazi mala sličica. `components/TeloMisici.tsx` (`react-native-body-highlighter@3.2.0` + `react-native-svg` 15.15.4): telo spreda/otpozadi, glavni `primary`, pomoćni `secondary`; `react-native-svg` se učitava LENJO (`TurboModuleRegistry.get("RNSVGSvgViewModule")`) → stari build prikazuje GIF, ali ne crtež.
+- **Za crtež treba NOVI EAS development build** (react-native-svg). GIF radi i na starom buildu (samo reload).
+- Provereno: pytest 177/177, ruff čist, `tsc` prolazi, jest 36/36, `expo export --platform android` prolazi. Uživo Haiku: Čučanj sa šipkom → Barbell Full Squat, Sklekovi → push-up, Zgibovi → pull-up, Bugarski split čučanj → barbell split squat, Iskorak sa bučicama → dumbbell lunge, Hip thrust → Band Hip Thrusts On Knees (osnovnog hip thrusta nema), Plank → nema (osnovnog planka nema u besplatnih 1500), Burpee → burpee, Ples → nema. **GIF i crtež na telefonu nisu provereni.**
+- Mane: besplatni GIF je mali (180p); neke osnovne vežbe fale (plank, hip thrust sa šipkom); ima duplikata naziva (npr. "clock push-up" 2×); `nivo` ne postoji.
+
+## 6r. Sređen api.ts + testovi ekrana (2026-11-14)
+- `mobile/src/services/api.ts` (584 → 416 linija): svi pozivi idu kroz jedan helper `zahtev(putanja, greska, { method, json, form, detalj })` — adresa (`getApiUrl`), ključ, `ok` provera i poruka o grešci su na jednom mestu. `detalj: true` = prikaži `detail` sa servera (kao ranije `serverDetail`). Imena i potpisi funkcija su ISTI, ekrani nisu dirani. Nova funkcija = jedan red sa `zahtev(...)`.
+- Pre izmene napravljen ugovor-test `__tests__/api-ugovor.test.ts`: za svih 60 poziva snimak (snapshot) tačne adrese, metode, zaglavlja i tela, napravljen na STAROM kodu; novi kod daje identične zahteve. Vrednost `X-API-Key` se ne upisuje u snimak. Ako namerno menjaš zahtev: `npx jest -u` i proveri razliku u `__tests__/__snapshots__/`.
+- Testovi ekrana: `__tests__/ekran-danas.test.tsx` (nema veze, nema profila, nema jelovnika, poruke o kalorijama/proteinima, "Pojeo sam"/"Nešto drugo"/"Preskočio", poništavanje, brisanje unosa, baner, današnji trening) i `__tests__/ekran-zamena.test.tsx` (ručni unos i provera polja, procena iz naziva, slika iz galerije/kamere, `odmah=slika`, skener).
+- Rezultat: jest **136/136** (bilo 36), pokrivenost mobile koda **~9% → ~23%** (`api.ts` 100%, Danas 94%, zamena 95%). `tsc` prolazi, `expo export --platform android` prolazi. Samo testovi i JS, ne treba novi build; ekrani na telefonu nisu ponovo provereni (ponašanje nije menjano).
+
+## 6s. Priprema za Hetzner server (2026-11-14)
+- Izbor: **Hetzner CX23** (Ubuntu 24.04), **DuckDNS** besplatan poddomen (treba za HTTPS sertifikat — Android release build blokira `http://`, a bez TLS-a ključ i zdravstveni podaci idu kao čist tekst), **Caddy** (HTTPS + reverse proxy), systemd. Bez Dockera. Whisper i MediaPipe ostaju isti (na serveru `torch` CPU verzija, ista verzija).
+- Uputstvo korak po korak: **`deploy/README.md`**. Skripte: `deploy/posalji.ps1` (sa laptopa: `-Postavi -Domen` jednom, `-PrviPut` jednom šalje bazu/.env/katalog/model — odbija ako baza na serveru već postoji, bez parametara = nova verzija iz poslednjeg commit-a), `postavi_server.sh` (paketi, Python 3.13 deadsnakes, Caddy, korisnik `reelfuel`, ufw 22/80/443, swap 4 GB, zona Europe/Ljubljana, SSH samo ključem), `instaliraj.sh` (venv, pip, servis, provera 401), `reelfuel.service` (uvicorn 127.0.0.1:8000, 1 worker, `XDG_CACHE_HOME=/opt/reelfuel/cache`), `reelfuel-kopija.timer` (dnevna kopija u 03:30 — ranije samo pri startu servera, što na 24/7 serveru ne bi radilo). `.gitattributes`: `.sh/.service/.timer` sa LF.
+- Backend: `DOCS=0` isključuje `/docs`, `/redoc`, `/openapi.json`; `CORS_ORIGINS` (lista, prazno = bez CORS-a, podrazumevano `*` lokalno). `instaliraj.sh` sam doda `DOCS=0` i `CORS_ORIGINS=` u `.env` na serveru.
+- **Granica skupih zahteva** (`core/rate_limit.py`, middleware u `main.py`): grupa `ai` (chat, slika, glas, opis, jelovnik/trening/kupovina generate, etiketa, detalji vežbe, po-nazivu, `nedelja/osvezi?force=true`) 150/sat, grupa `obrada` (`POST /ingest/`, `/recipe/`, `/exercise/`) 30/sat → 429 + `Retry-After`. Broje se samo zahtevi sa ispravnim ključem. `.env`: `LIMIT_AI_NA_SAT`, `LIMIT_OBRADA_NA_SAT` (0 = bez granice). Stanje je u memoriji (zato 1 worker).
+- Mobile: `eas.json` profil `preview` = APK sa `environment: preview` — JS je u APK-u, radi bez laptopa; `EXPO_PUBLIC_API_URL`/`EXPO_PUBLIC_API_KEY` se upisuju preko `eas env:create` (`.env` se ne šalje na EAS). U release buildu `apiConfig` nema Expo adrese → koristi `EXPO_PUBLIC_API_URL`.
+- Provereno: pytest **207/207** (novi `test_server_podesavanja.py`), ruff F/E9 čist, `bash -n` za obe skripte, PowerShell parser za `posalji.ps1`, skripte čist ASCII. **Server nije napravljen; skripte nisu pokrenute na pravom Ubuntu-u; preview build nije napravljen.**
+- Rizik: Instagram često blokira IP adrese data centara → skidanje reela sa servera može da ne radi (TikTok obično radi); rešenje bi bili kolačići za yt-dlp.
+
 ## 7. Poznati problemi / dug
 Funkcionalni:
+- Katalog vežbi (ExerciseDB besplatni): GIF 180p, fale neke osnovne vežbe (plank), fajl nije u gitu (6q).
 - Prevod koraka vežbi (Haiku) ponekad ima jezičke greške; prevodi su keširani u `vezba_prevod` (brisanje reda = nov prevod).
 - Pesme sa tekstom prolaze Whisper filter kao govor (vidi 6l) — prihvaćeno.
 - Stavke liste za kupovinu nastale pre 2026-11-02 nemaju `izvor`, pa ih `/shoppinglist/generate` ne briše.
 
 Kod/higijena:
 - `mobile/AGENTS.md`/`CLAUDE.md` su iz Expo šablona (kažu: čitaj Expo v57 dokumentaciju — to važi).
-- Backend testovi: 174, pokrivenost 95% (6o, 6p). Mobile: 36 testova, ~9% (ekrani netestirani). Sistemskih (telefon → server) testova nema. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
-- Previše složene funkcije (ruff C901): `ingest_pipeline._run`, `chat_service.execute_tool`, `kalorijska_korekcija._napravi_predlog`. `mobile/src/services/api.ts` (584 linije) ponavlja isti fetch obrazac; 44× `: any` u mobile kodu.
+- Backend testovi: 177, pokrivenost 95% (6o, 6p, 6q). Mobile: 136 testova, ~23% (testirani Danas i zamena; ostali ekrani nisu). Sistemskih (telefon → server) testova nema. Nema pravih migracija (samo dodavanje kolona preko `NOVE_KOLONE`).
+- Previše složene funkcije (ruff C901): `ingest_pipeline._run`, `chat_service.execute_tool`, `kalorijska_korekcija._napravi_predlog`. `api.ts` sređen (6r), ali odgovori servera i dalje nemaju tipove (`any`) — ~47× `: any` u mobile kodu.
 - Kopija baze postoji samo na laptopu (`backend/backups/`); korisnik nema OneDrive/Google Drive — odloženo.
 
 Bezbednost / operativno:
 - Ključevi (Anthropic, `APP_SECRET_KEY`, ngrok) rotirani 2026-11-02 (potvrdio korisnik; aplikacija radi sa novim ključem).
 - Push faza 1–3 je na `origin/main` (github.com/PetarKojadinovic/ReelFuel).
-- CORS je `*` (potrebno za web testiranje; suziti pre hostinga).
-- Pred hosting: HTTP bez TLS-a, deljeni ključ u APK-u, `/docs` dostupan bez ključa, nema rate limita (trošak LLM-a).
+- CORS je `*` lokalno; na serveru isključen (`CORS_ORIGINS=`, 6s).
+- Za server (6s) rešeno: HTTPS (Caddy), `/docs` isključen, granica skupih zahteva. Ostaje: deljeni ključ u APK-u (nije prava autentikacija) → obavezan mesečni limit potrošnje u Anthropic konzoli.
 
 ## 8. Roadmap / ideje (po prioritetu)
 1. Proveriti novu ikonicu i splash na telefonu posle EAS builda.

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, View, Text, Image, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { ScrollView, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { Image } from "expo-image";
 import { colors } from "../theme";
 import { common, typography, radius, spacing } from "../styles/common";
 import { Card, DetailHeader, StatCard, Icon, TextButton } from "../components/ui";
+import TeloMisici from "../components/TeloMisici";
 import { getExerciseDetails, searchExerciseCatalog, setExerciseCatalog, getCatalogByName, setCatalogByName } from "../services/api";
 
 type Katalog = {
@@ -17,6 +19,9 @@ type Katalog = {
   kategorija?: string | null;
   koraci: string[];
   slike: string[];
+  telo_glavni?: string[];
+  telo_sporedni?: string[];
+  izvor?: string;
 };
 
 type Rezultat = { id: string; naziv_en: string; glavni_misici: string[]; oprema?: string | null; slika?: string | null };
@@ -139,17 +144,14 @@ function Opis({ katalog, onPromeni }: { katalog: Katalog; onPromeni: () => void 
   return (
     <View>
       {katalog.slike.length > 0 && (
-        <View style={styles.slike}>
-          {katalog.slike.slice(0, 2).map((url, i) => (
-            <Image
-              key={url}
-              source={{ uri: url }}
-              style={styles.slika}
-              resizeMode="cover"
-              accessibilityLabel={i === 0 ? "Početni položaj" : "Krajnji položaj"}
-            />
-          ))}
-        </View>
+        // GIF (expo-image ga animira i na Androidu)
+        <Image
+          source={{ uri: katalog.slike[0] }}
+          style={styles.gif}
+          contentFit="contain"
+          autoplay
+          accessibilityLabel={`Kako se radi: ${katalog.naziv}`}
+        />
       )}
 
       <Card>
@@ -166,25 +168,30 @@ function Opis({ katalog, onPromeni }: { katalog: Katalog; onPromeni: () => void 
             </View>
           ))}
         </View>
+        <TeloMisici glavni={katalog.telo_glavni ?? []} sporedni={katalog.telo_sporedni ?? []} />
         {katalog.sporedni_misici.length > 0 && (
-          <Text style={[typography.note, { marginTop: spacing.sm }]}>Zeleno: glavni mišići. Ostalo: pomažu.</Text>
+          <Text style={[typography.note, { marginTop: spacing.sm }]}>Svetlo zeleno: glavni mišići. Tamnije: pomažu.</Text>
         )}
         {podaci ? <Text style={[typography.bodySecondary, { marginTop: spacing.sm }]}>{podaci}</Text> : null}
       </Card>
 
-      <Text style={typography.sectionLabel}>Kako se radi</Text>
-      <Card>
-        {katalog.koraci.map((k, i) => (
-          <View key={i} style={styles.korak}>
-            <Text style={styles.korakBroj}>{i + 1}</Text>
-            <Text style={[typography.listItem, styles.flex]}>{k}</Text>
-          </View>
-        ))}
-      </Card>
+      {katalog.koraci.length > 0 && (
+        <>
+          <Text style={typography.sectionLabel}>Kako se radi</Text>
+          <Card>
+            {katalog.koraci.map((k, i) => (
+              <View key={i} style={styles.korak}>
+                <Text style={styles.korakBroj}>{i + 1}</Text>
+                <Text style={[typography.listItem, styles.flex]}>{k}</Text>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
 
       <Text style={typography.note}>
         {katalog.naziv !== katalog.naziv_en ? `${katalog.naziv} (${katalog.naziv_en}). ` : ""}
-        Opis i slike: free-exercise-db (javni domen).
+        Opis i animacija: {katalog.izvor ?? "ExerciseDB"}.
       </Text>
       <TextButton title="Nije ta vežba?" onPress={onPromeni} />
     </View>
@@ -246,7 +253,7 @@ function Biranje({
       {(rezultati ?? []).map((r) => (
         <TouchableOpacity key={r.id} style={common.option} onPress={() => onIzbor(r.id)}>
           {r.slika ? (
-            <Image source={{ uri: r.slika }} style={styles.mala} />
+            <Image source={{ uri: r.slika }} style={styles.mala} contentFit="cover" autoplay={false} />
           ) : (
             <View style={styles.mala}>
               <Icon name="barbell-outline" color={colors.primary} />
@@ -276,8 +283,8 @@ function Biranje({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   centerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  slike: { flexDirection: "row", gap: spacing.sm, marginBottom: 10 },
-  slika: { flex: 1, aspectRatio: 1, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt },
+  // ExerciseDB GIF ima belu pozadinu
+  gif: { width: "100%", aspectRatio: 1, borderRadius: radius.lg, backgroundColor: colors.mediaBg, marginBottom: 10 },
   mala: {
     width: 56,
     height: 56,

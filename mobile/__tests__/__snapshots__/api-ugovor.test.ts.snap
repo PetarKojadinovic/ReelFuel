@@ -1,0 +1,935 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`zahtev za svaku funkciju addLogEntry 1`] = `
+[
+  {
+    "body": {
+      "datum": "2026-11-14",
+      "izvor": "slobodan",
+      "kalorije": 150,
+      "naziv": "Jaja",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/log/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju addManualExercise 1`] = `
+[
+  {
+    "body": {
+      "grupa_misica": "leđa",
+      "naziv_vezbe": "Zgibovi",
+      "serije_i_ponavljanja": "3x8",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/exercise/manual",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju addManualRecipe 1`] = `
+[
+  {
+    "body": {
+      "koraci": [
+        "kuvaj",
+      ],
+      "naziv_jela": "Supa",
+      "sastojci": [
+        {
+          "kolicina": "1 l",
+          "naziv": "voda",
+        },
+      ],
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/recipe/manual",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju addWeightEntry 1`] = `
+[
+  {
+    "body": {
+      "datum": "2026-11-14",
+      "tezina_kg": 80.5,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/weightlog/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju addWorkoutLogEntry 1`] = `
+[
+  {
+    "body": {
+      "datum": "2026-11-14",
+      "izvor": "plan",
+      "naziv_vezbe": "Sklekovi",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/workoutlog/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju analyzeMealPhoto 1`] = `
+[
+  {
+    "body": {
+      "media_type": "image/jpeg",
+      "slika_base64": "QUJD",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/dan/analiza-slike",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju danAkcija 1`] = `
+[
+  {
+    "body": {
+      "akcija": "zamena",
+      "kalorije": 800,
+      "naziv": "Pica",
+      "proteini_g": 30,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/dan/2026-11-14/rucak",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteExercise 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/exercise/5",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteLogEntry 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/log/4",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteRecipe 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/recipe/3",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteShoppingItem 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/shoppinglist/11",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteWeightEntry 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/weightlog/9",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju deleteWorkoutLogEntry 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "DELETE",
+    "url": "http://192.168.1.20:8000/workoutlog/8",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju generateMealPlan 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/mealplan/generate",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju generateShoppingList 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/shoppinglist/generate",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju generateShoppingListFromRecipe 1`] = `
+[
+  {
+    "body": {
+      "recipe_id": 12,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/shoppinglist/generate-from-recipe",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju generateWorkoutPlan 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/workoutplan/generate",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getBackups 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/backup/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getCatalogByName 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/exercise/katalog/po-nazivu?naziv=%C4%8Cu%C4%8Danj%20sa%20%C5%A1ipkom&grupa=noge",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getCatalogByName bez grupe 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/exercise/katalog/po-nazivu?naziv=Plank&grupa=",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getChatHistory 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/chat/history",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getDan 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/dan/2026-11-14?sada=09%3A05&dorucak=08%3A00&rucak=13%3A00&vecera=19%3A00",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getDayLog 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/log/2026-11-14",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getExerciseDetails 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/exercise/6/detalji",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getIngestJob 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/ingest/abc",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getIngestPregled 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/ingest/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getKorekcija 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/korekcija/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getLatestMealPlan 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/mealplan/latest",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getLatestWorkoutPlan 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/workoutplan/latest",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getNedeljaStatus 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/nedelja/status",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getPlanSlotovi 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/plan/slotovi?recipe_id=13&sada=09%3A05&dorucak=08%3A00&rucak=13%3A00&vecera=19%3A00",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getProfile 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/profile/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getProizvod 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/proizvod/3017620422003",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getShoppingList 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/shoppinglist/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getWeeklyReport 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/report/weekly",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getWeightSummary 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/weightlog/summary",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju getWorkoutDayLog 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/workoutlog/2026-11-14",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju listExercises 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/exercise/list",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju listRecipes 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/recipe/list",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju napraviBackup 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/backup/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju odbaciIngestJob 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/ingest/abc/odbaci",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju odgovoriKorekcija 1`] = `
+[
+  {
+    "body": {
+      "prihvati": true,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/korekcija/14/odgovor",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju osveziNedelju 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/nedelja/osvezi",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju osveziNedelju force 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/nedelja/osvezi?force=true",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju proceniGlas 1`] = `
+[
+  {
+    "body": "FormData",
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/dan/glas",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju proceniOpis 1`] = `
+[
+  {
+    "body": {
+      "tekst": "dva jaja",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/dan/opis",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju procitajEtiketu 1`] = `
+[
+  {
+    "body": {
+      "media_type": "image/jpeg",
+      "naziv": "Nutella",
+      "slika_base64": "QUJD",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/proizvod/3017620422003/etiketa",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju resetKorekcija 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/korekcija/reset",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju saveIngestJob 1`] = `
+[
+  {
+    "body": {},
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/ingest/abc/save",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju saveProfile 1`] = `
+[
+  {
+    "body": {
+      "cilj": "odrzavanje",
+      "godine": 25,
+      "nivo_aktivnosti": "umereno",
+      "pol": "muski",
+      "raspodela_kalorija": "ravnomerno",
+      "tezina_kg": 80,
+      "visina_cm": 180,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/profile/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju searchExerciseCatalog 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "GET",
+    "url": "http://192.168.1.20:8000/exercise/katalog?q=push%20up%26x",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju sendChatMessage 1`] = `
+[
+  {
+    "body": {
+      "message": "zdravo",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/chat/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju setCatalogByName 1`] = `
+[
+  {
+    "body": {
+      "katalog_id": null,
+      "naziv": "Plank",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "PUT",
+    "url": "http://192.168.1.20:8000/exercise/katalog/po-nazivu",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju setExerciseCatalog 1`] = `
+[
+  {
+    "body": {
+      "katalog_id": "I4hDWkc",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "PUT",
+    "url": "http://192.168.1.20:8000/exercise/7/katalog",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju startIngest 1`] = `
+[
+  {
+    "body": {
+      "tip": "recept",
+      "url": "https://www.instagram.com/reel/x",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/ingest/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju startIngest bez tipa 1`] = `
+[
+  {
+    "body": {
+      "url": "https://www.instagram.com/reel/x",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/ingest/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju submitExerciseLink 1`] = `
+[
+  {
+    "body": {
+      "url": "https://www.tiktok.com/@a/video/1",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/exercise/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju submitRecipeLink 1`] = `
+[
+  {
+    "body": {
+      "url": "https://www.instagram.com/reel/x",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/recipe/",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju toggleShoppingItem 1`] = `
+[
+  {
+    "body": undefined,
+    "headers": {
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "PATCH",
+    "url": "http://192.168.1.20:8000/shoppinglist/10/toggle",
+  },
+]
+`;
+
+exports[`zahtev za svaku funkciju ubaciUPlan 1`] = `
+[
+  {
+    "body": {
+      "dan_offset": 2,
+      "obrok_tip": "vecera",
+      "recipe_id": 13,
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-API-Key": "<kljuc>",
+      "ngrok-skip-browser-warning": "true",
+    },
+    "method": "POST",
+    "url": "http://192.168.1.20:8000/plan/ubaci",
+  },
+]
+`;

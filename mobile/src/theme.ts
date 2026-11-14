@@ -19,6 +19,7 @@ export const colors = {
   recipeAccent: "#7CFF3D",
   exerciseAccent: "#7CFF3D",
   danger: "#EF4444",
+  mediaBg: "#FFFFFF",      // pozadina iza GIF-ova vezbi (ExerciseDB ima belu pozadinu)
 };
 
 /** Nunito, ucitava se u app/_layout.tsx. Na Androidu fontWeight ne bira debljinu za custom font -> koristi ove nazive. */

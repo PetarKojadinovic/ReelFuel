@@ -5,3 +5,5 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+# Kopije baze skinute sa servera (zdravstveni podaci)
+server-kopije/

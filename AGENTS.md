@@ -10,7 +10,7 @@ Ako postoje `mobile/AGENTS.md` i `mobile/CLAUDE.md`, to su ostaci Expo šablona 
 - Uvek daj tačne komande za PowerShell (ne bash) kada ih predlažeš.
 
 ## 2. Tvrda pravila
-1. **Tajne nikad u git.** `.env` fajlovi se ne commit-uju, samo `.env.example`. Nikad ne ispisuj, ne loguj i ne hardkoduj `ANTHROPIC_API_KEY`, `APP_SECRET_KEY`, ngrok token, IP adrese. Pre svakog commit-a: `git grep --cached -n "sk-ant-"` mora biti prazno.
+1. **Tajne nikad u git.** `.env` fajlovi se ne commit-uju, samo `.env.example`. Nikad ne ispisuj, ne loguj i ne hardkoduj `ANTHROPIC_API_KEY`, `APP_SECRET_KEY`, ngrok token, IP adrese. Pre svakog commit-a: `git grep --cached -n -E "sk-ant-[A-Za-z0-9_-]{20,}"` mora biti prazno.
 2. **Ne briši bazu** (`backend/reelfuel.db`). Nova kolona u postojećoj tabeli: dodaj je u model i u `NOVE_KOLONE` u `database.py` (`init_db` uradi `ALTER TABLE`). Brisanje baze samo za promenu tipa/brisanje kolone — i tada prvo upozori korisnika da će izgubiti podatke.
 3. **Ne dodaj zavisnosti bez razloga.** Reci šta i zašto; za mobile proveri kompatibilnost sa Expo SDK 57 (`npx expo install` ili tačna verzija, npr. `expo-share-intent@8`).
 4. **Ne tvrdi da nešto radi ako nije testirano.** Razlikuj "napisano" od "potvrđeno na telefonu/webu". Ako ne možeš da pokreneš, reci to.
@@ -29,6 +29,7 @@ cd backend
 uvicorn app.main:app --reload --host 0.0.0.0     # Swagger: http://localhost:8000/docs
 python -m pytest -q                               # testovi (pip install -r requirements-dev.txt)
 python -m pytest -q --cov=app --cov-report=term   # sa pokrivenoscu
+python ..\scripts\exercisedb_katalog.py             # katalog vezbi (nije u gitu; jednom posle kloniranja)
 ```
 Mobile:
 ```powershell
@@ -38,10 +39,15 @@ npx tsc --noEmit             # provera tipova
 npm test                     # jest testovi (mobile/__tests__/, ne u src/app)
 eas build --profile development --platform android   # novi build kad se menja native (plugin, app.json, nova native lib)
 ```
+Server (Hetzner, uputstvo `deploy/README.md`; šalje POSLEDNJI COMMIT):
+```powershell
+.\deploy\posalji.ps1 -Server <IP>                                  # nova verzija backenda
+ssh root@<IP> "journalctl -u reelfuel -n 100 --no-pager"           # greške na serveru
+```
 Git provera pred push:
 ```powershell
 git status
-git grep --cached -n "sk-ant-"
+git grep --cached -n -E "sk-ant-[A-Za-z0-9_-]{20,}"
 ```
 Env promenljive:
 - `backend/.env`: `ANTHROPIC_API_KEY`, `APP_SECRET_KEY` (+ ostalo iz `backend/.env.example`)
@@ -108,7 +114,7 @@ Za Expo API proveri dokumentaciju za SDK 57: https://docs.expo.dev/versions/v57.
 13. `uvicorn --reload` na Windowsu ponekad zapne posle izmene `database.py` (nove rute vraćaju 404) → ugasi i pokreni server ponovo.
 
 ## 8. Ne pretpostavljaj
-- Server **nije** na internetu — radi lokalno (laptop + telefon u istoj mreži). Hosting je odložen.
+- Backend radi lokalno (laptop) ILI na Hetzner serveru (`deploy/`, HTTPS preko Caddy-ja, DuckDNS domen). Proveri u `CONTEXT.md` (6s) da li je server već napravljen. Na serveru: `DOCS=0`, bez CORS-a, granica skupih zahteva, 1 uvicorn worker. Ne pokreći `posalji.ps1 -PrviPut` ako na serveru već ima baze (skripta odbija).
 - `X-API-Key` je deljeni ključ, **nije prava autentikacija** (ključ je u APK-u). Nema korisničkih naloga; profil je `.first()` red u bazi — aplikacija je za jednog korisnika.
 - Health Connect / pametni sat / vaga **nisu implementirani** (korisnik nema uređaje).
 - Nemoj tvrditi da su share-intent iz Instagrama i dugmad u notifikacijama potvrđeni na telefonu — nisu eksplicitno potvrđeni.

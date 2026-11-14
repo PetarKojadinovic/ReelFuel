@@ -1,0 +1,264 @@
+{
+ "izvor": "test",
+ "preuzeto": "2026-11-10",
+ "vezbe": [
+  {
+   "id": "2gPfomN",
+   "name": "3/4 sit-up",
+   "instructions": [
+    "Settle onto your back with your knees bent and feet planted.",
+    "Set your hands behind your head with your elbows pointing outwards.",
+    "Set the pelvis and keep the neck relaxed before curling upward.",
+    "Curl your rib cage toward your pelvis, letting the abdominals move the torso.",
+    "Leave a little space between the chin and chest; keep the movement in the torso.",
+    "Lower the shoulders or torso with control before the next curl."
+   ],
+   "bodyParts": [
+    "waist"
+   ],
+   "primaryMuscles": [
+    "abdominals"
+   ],
+   "secondaryMuscles": [
+    "hip flexors",
+    "erector spinae"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/2gPfomN.gif"
+  },
+  {
+   "id": "I4hDWkc",
+   "name": "push-up",
+   "instructions": [
+    "Begin in a high plank position with your hands just beyond shoulder width and your feet together.",
+    "Brace your trunk and lower your body toward the ground by bending your elbows, keeping your body in a straight line.",
+    "Brace the abdomen and glutes so the shoulders, hips and ankles move together.",
+    "Bend your elbows to lower your chest while keeping your body in one line.",
+    "Keep the head in line with the spine as the elbows bend.",
+    "Press back to straight arms, keeping the body line intact."
+   ],
+   "bodyParts": [
+    "chest"
+   ],
+   "primaryMuscles": [
+    "pectorals"
+   ],
+   "secondaryMuscles": [
+    "triceps",
+    "deltoids",
+    "core"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/I4hDWkc.gif"
+  },
+  {
+   "id": "lBDjFxJ",
+   "name": "pull-up",
+   "instructions": [
+    "Suspend yourself from a pull-up bar with your palms turned away from you and your arms straight.",
+    "Brace your trunk and draw your shoulder blades toward each other.",
+    "Begin from a controlled hang with the shoulders active rather than slack.",
+    "Pull your elbows down and bring your upper chest toward the bar without kicking your legs.",
+    "Avoid swinging the legs to clear the bar.",
+    "Lower to long arms without dropping suddenly from the top."
+   ],
+   "bodyParts": [
+    "back"
+   ],
+   "primaryMuscles": [
+    "latissimus dorsi"
+   ],
+   "secondaryMuscles": [
+    "biceps",
+    "forearms"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/lBDjFxJ.gif"
+  },
+  {
+   "id": "iYzB0Cz",
+   "name": "Barbell Full Squat",
+   "instructions": [
+    "Stand and set your feet about shoulder width, toes slightly turned out.",
+    "Rest the bar across the upper back and take a secure grip.",
+    "Brace the abdomen and spread pressure across the whole foot.",
+    "Bend at the hips and knees to lower, keeping your feet grounded and knees tracking with the toes.",
+    "Drive upward with the chest and hips rising together; keep the knees from collapsing inward.",
+    "Stand fully, reset your footing and breathing, then begin the next descent."
+   ],
+   "bodyParts": [
+    "upper legs"
+   ],
+   "primaryMuscles": [
+    "glutes"
+   ],
+   "secondaryMuscles": [
+    "quadriceps",
+    "hamstrings",
+    "calves",
+    "core"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "gif": "https://static.exercisedb.dev/media/iYzB0Cz.gif"
+  },
+  {
+   "id": "EIeI8Vf",
+   "name": "barbell bench press",
+   "instructions": [
+    "Settle onto a bench with your feet planted and your back pressed against the bench.",
+    "Hold the barbell with palms facing down just beyond shoulder width.",
+    "Brace the torso and align the wrists with the forearms.",
+    "Press the weight or handles away while keeping your trunk braced.",
+    "Keep the wrists stacked and use a shoulder path that feels natural.",
+    "Lower the weight to its starting height under control before pressing again."
+   ],
+   "bodyParts": [
+    "chest"
+   ],
+   "primaryMuscles": [
+    "pectorals"
+   ],
+   "secondaryMuscles": [
+    "triceps",
+    "deltoids"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "gif": "https://static.exercisedb.dev/media/EIeI8Vf.gif"
+  },
+  {
+   "id": "dK9394r",
+   "name": "burpee",
+   "instructions": [
+    "Begin in a standing position with your feet about shoulder width.",
+    "Before moving, lower your body into a squat position by bending your knees and placing your hands on the floor in front of you.",
+    "Start at a pace that lets the feet and arms move in sync.",
+    "Move at a repeatable pace, keeping the motion smooth and your breathing steady.",
+    "Keep the pattern repeatable as speed increases.",
+    "Keep the rhythm for the planned interval, slowing if your form starts to slip."
+   ],
+   "bodyParts": [
+    "cardio"
+   ],
+   "primaryMuscles": [
+    "cardiovascular system"
+   ],
+   "secondaryMuscles": [
+    "quadriceps",
+    "hamstrings",
+    "calves",
+    "deltoids",
+    "pectorals"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/dK9394r.gif"
+  },
+  {
+   "id": "RRWFUcw",
+   "name": "dumbbell lunge",
+   "instructions": [
+    "Stand and set your feet about shoulder width, holding a dumbbell in each hand.",
+    "Step forward with your right foot, lowering your body into a lunge position.",
+    "Set your stance wide enough to balance before bending either knee.",
+    "Step into the movement and bend both knees, keeping your front foot planted.",
+    "Keep the front foot planted and avoid collapsing inward at the knee.",
+    "Push through the lead foot to return to the start, then change legs as planned."
+   ],
+   "bodyParts": [
+    "upper legs"
+   ],
+   "primaryMuscles": [
+    "glutes"
+   ],
+   "secondaryMuscles": [
+    "quadriceps",
+    "hamstrings",
+    "calves"
+   ],
+   "equipment": [
+    "dumbbell"
+   ],
+   "gif": "https://static.exercisedb.dev/media/RRWFUcw.gif"
+  },
+  {
+   "id": "XIHEoCG",
+   "name": "standing calves",
+   "instructions": [
+    "Stand and set your feet about shoulder width, toes pointing forward.",
+    "Before moving, raise your heels off the ground as high as possible, standing on your toes.",
+    "Let the ankles move freely while the rest of the body stays quiet.",
+    "Rise through the balls of your feet, lifting the heels as high as you can without rocking.",
+    "Pause at the top without rolling the ankles outward.",
+    "Lower the heels at a measured pace before rising again."
+   ],
+   "bodyParts": [
+    "lower legs"
+   ],
+   "primaryMuscles": [
+    "calves"
+   ],
+   "secondaryMuscles": [
+    "hamstrings",
+    "glutes"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/XIHEoCG.gif"
+  },
+  {
+   "id": "CMAxnsG",
+   "name": "clock push-up",
+   "instructions": [
+    "Begin in a high plank position with your hands directly under your shoulders and your body in a straight line.",
+    "Lower your body toward the ground by bending your elbows, keeping them close to your sides.",
+    "Brace the abdomen and glutes so the shoulders, hips and ankles move together.",
+    "Bend your elbows to lower your chest while keeping your body in one line.",
+    "Keep the head in line with the spine as the elbows bend.",
+    "Press back to straight arms, keeping the body line intact."
+   ],
+   "bodyParts": [
+    "chest"
+   ],
+   "primaryMuscles": [
+    "pectorals"
+   ],
+   "secondaryMuscles": [
+    "triceps",
+    "deltoids",
+    "core"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://static.exercisedb.dev/media/CMAxnsG.gif"
+  },
+  {
+   "id": "bezKoraka",
+   "name": "empty move",
+   "instructions": [],
+   "bodyParts": [
+    "waist"
+   ],
+   "primaryMuscles": [
+    "serratus anterior"
+   ],
+   "secondaryMuscles": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "gif": "https://zlo.example/x.gif"
+  }
+ ]
+}

@@ -1,7 +1,12 @@
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
+import math
+import os
 
-from app.core.security import verify_api_key
+from fastapi import FastAPI, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.core.security import verify_api_key, kljuc_ispravan
+from app.core import rate_limit
 from app.models.database import init_db, SessionLocal, IngestJob
 from app.services.backup import dnevna_kopija
 from app.api.routes import (
@@ -25,15 +30,52 @@ from app.api.routes import (
     backup,
 )
 
-app = FastAPI(title="ReelFuel API", dependencies=[Depends(verify_api_key)])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+
+def docs_ukljucen() -> bool:
+    """Swagger (/docs) radi bez ključa i otkriva sve rute -> na serveru DOCS=0."""
+    return os.getenv("DOCS", "1").strip().lower() not in ("0", "false", "ne")
+
+
+def cors_adrese() -> list[str]:
+    """CORS treba samo za web verziju u browseru (APK ga ne koristi). Prazno = isključen.
+
+    Lokalno je podrazumevano "*" (web testiranje); na serveru CORS_ORIGINS= (prazno).
+    """
+    return [a.strip() for a in os.getenv("CORS_ORIGINS", "*").split(",") if a.strip()]
+
+
+_docs = docs_ukljucen()
+app = FastAPI(
+    title="ReelFuel API",
+    dependencies=[Depends(verify_api_key)],
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
 )
+
+if cors_adrese():
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_adrese(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+@app.middleware("http")
+async def ogranici_skupe_zahteve(request: Request, call_next):
+    grupa = rate_limit.grupa_za(request.method, request.url.path, request.url.query)
+    if grupa and kljuc_ispravan(request.headers.get("x-api-key")):
+        cekaj = rate_limit.ogranicenje.pokusaj(grupa, rate_limit.LIMITI[grupa])
+        if cekaj is not None:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": f"Previše zahteva za kratko vreme. Pokušaj ponovo za {math.ceil(cekaj / 60)} min."},
+                headers={"Retry-After": str(cekaj)},
+            )
+    return await call_next(request)
 
 
 @app.on_event("startup")

@@ -1,0 +1,10 @@
+[Unit]
+Description=ReelFuel dnevna kopija baze
+
+[Service]
+Type=oneshot
+User=reelfuel
+Group=reelfuel
+WorkingDirectory=/opt/reelfuel/backend
+# Ista funkcija kao pri startu servera: kopija samo ako danas jos nije napravljena (cuva se 10)
+ExecStart=/opt/reelfuel/venv/bin/python -c "from app.services.backup import dnevna_kopija; dnevna_kopija()"

@@ -9,3 +9,4 @@ models/*.task
 backups/
 .coverage
 htmlcov/
+data/vezbe_katalog.json

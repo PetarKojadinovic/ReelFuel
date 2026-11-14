@@ -157,6 +157,8 @@ def detalji_vezbe(exercise_id: int, db: Session = Depends(get_db)):
     """Vežba + podaci iz kataloga (mišići, koraci, slike). Prvi put je poveže sa katalogom (AI)."""
     e = _vezba_ili_404(db, exercise_id)
     greska = False
+    if e.katalog_id and not vezbe_katalog.postoji(e.katalog_id):
+        e.katalog_id = None  # vežba iz starog kataloga -> poveži ponovo
     if e.katalog_id is None:
         try:
             e.katalog_id = vezbe_katalog.nadji_u_katalogu(e.naziv_vezbe, e.grupa_misica) or ""
@@ -164,9 +166,6 @@ def detalji_vezbe(exercise_id: int, db: Session = Depends(get_db)):
         except Exception:
             log.exception("Povezivanje sa katalogom nije uspelo")
             greska = True  # ne pamti se -> pokušava se opet sledeći put
-    elif e.katalog_id and not vezbe_katalog.postoji(e.katalog_id):
-        e.katalog_id = ""  # vežba nestala iz kataloga posle osvežavanja
-        db.commit()
     return _odgovor_detalji(db, e, greska)
 
 
