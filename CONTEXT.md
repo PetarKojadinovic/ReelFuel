@@ -32,7 +32,7 @@ Telefon (Expo dev build APK) ──HTTP, X-API-Key──► FastAPI (laptop, 0.0
 | 3 | Automatski nedeljni plan (`nedelja_plan.py`), korekcija kalorijskog cilja (`kalorijska_korekcija.py`), `NedeljaIKorekcija.tsx` | Potvrđeno radi |
 | 4 | Health Connect (sat/vaga) | **Preskočeno** — korisnik nema uređaje; kod nije primenjen, `app.json` nepromenjen |
 | 8 | Spremno za pregled, link iz clipboard-a, plan po datumima, lista iz recepta (vidi 6d) | Potvrđeno na telefonu (2026-11-05, novi EAS build) |
-| 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **U toku** (6s): Hetzner CX23 (Nirnberg) + DuckDNS + Caddy **radi od 2026-11-14** (`https://reelfuel.duckdns.org`). Preview APK još nije napravljen. Prava autentikacija i FCM nisu započeti. |
+| 5 | Hosting 24/7, prava autentikacija, HTTPS, push preko FCM, cron | **U toku** (6s): Hetzner CX23 (Nirnberg) + DuckDNS + Caddy **radi od 2026-11-14** (`https://reelfuel.duckdns.org`). Preview APK napravljen i instaliran (2026-11-15). Prava autentikacija i FCM nisu započeti. |
 
 ## 4. Backend: rute (prefiksi iz `main.py`)
 `recipe`, `profile`, `mealplan`, `chat`, `log` (food_log), `exercise`, `workoutplan`, `workoutlog`, `weightlog`, `shoppinglist` (generate, generate-from-recipe, get, toggle, delete), `report`, `ingest`, `dan`, `nedelja`, `korekcija`, `plan`, `proizvod` (bar-kod), `backup`.
@@ -226,6 +226,8 @@ Korisniku se nije svideo free-exercise-db; probali smo wger (samo ~30% sa slikom
 - Mobile: `eas.json` profil `preview` = APK sa `environment: preview` — JS je u APK-u, radi bez laptopa; `EXPO_PUBLIC_API_URL`/`EXPO_PUBLIC_API_KEY` se upisuju preko `eas env:create` (`.env` se ne šalje na EAS). U release buildu `apiConfig` nema Expo adrese → koristi `EXPO_PUBLIC_API_URL`.
 - Provereno: pytest **207/207** (novi `test_server_podesavanja.py`), ruff F/E9 čist, `bash -n` za obe skripte, PowerShell parser za `posalji.ps1`, skripte čist ASCII. **Server nije napravljen; skripte nisu pokrenute na pravom Ubuntu-u; preview build nije napravljen.**
 - **2026-11-14 server napravljen i pokrenut**: Hetzner CX23, Nirnberg (`nbg1`), Ubuntu, domen `reelfuel.duckdns.org`. `-Postavi` i `-PrviPut` prošli bez greške; baza (268 KB), `.env`, katalog i model prebačeni. Provereno spolja: bez ključa 401, sa ključem `/profile/` 200, `/docs` 404, http → https (308), port 8000 nedostupan; tajmer kopije zakazan. **Od sada je prava baza na serveru**; baza na laptopu je stara kopija. Nije provereno: obrada reela (Whisper/yt-dlp) i glas na serveru, telefon preko HTTPS-a, preview build.
+- **2026-11-15**: korisnik javio da je uradio sve korake: preview APK instaliran i radi bez laptopa, provere reela/glasa, limit potrošnje u Anthropic konzoli. `README.md` prepisan na engleski i ažuriran (server, deploy, testovi).
+- Otvoreno: `backend/data/vezbe_katalog.json` (ExerciseDB) je i dalje u gitu (dodat pre `.gitignore` pravila) — skloniti sa `git rm --cached` zbog licence.
 - Hetzner cene (2026-11): CX23 od 5,99 € bez PDV-a (+ PDV, + doplata za lokaciju); CPX22 (4 GB) ~20 € — CX je pod karticom "Cost-Optimized". Nov nalog je tražio uplatu 25 € (kredit) ili dokument.
 - Rizik: Instagram često blokira IP adrese data centara → skidanje reela sa servera može da ne radi (TikTok obično radi); rešenje bi bili kolačići za yt-dlp.
 
